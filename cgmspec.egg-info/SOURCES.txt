@@ -1,0 +1,12 @@
+README.md
+setup.py
+cgmspec/__init__.py
+cgmspec/disco.py
+cgmspec/disco_original.py
+cgmspec/plotsimspec_original.py
+cgmspec/utils.py
+cgmspec.egg-info/PKG-INFO
+cgmspec.egg-info/SOURCES.txt
+cgmspec.egg-info/dependency_links.txt
+cgmspec.egg-info/requires.txt
+cgmspec.egg-info/top_level.txt

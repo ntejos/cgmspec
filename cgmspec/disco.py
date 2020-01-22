@@ -26,8 +26,25 @@ class Disco:
 
         return csu.prob_hit(r, self.R)
 
+    def los_vel(self, D, al, y, vR=200):
+        """
+        :param D: float, impact parameter in kpc
+        :param al: float, angle between the mayor axis and the line-of-sight, clockwise, in degrees
+        :param y: distance of the line-of-sight to the y axis of the disk
+        :param vR: velocity of rotation of the disk
+        :return: line-of-sight velocity for a cloud in the given position
+        """
+
+        inc = np.radians(self.incl)
+        al = np.radians(al)
+
+        x0 = (D*1000)*np.cos(al)
+        y0 = (D*1000)*np.sin(al)/np.cos(inc)
+        a = np.sin(inc)/np.sqrt(1+(y/x0)**2)
+        vr = vR*a
+        return(vr)
+
 
 
     def spec_clouds(self):
         pass
-

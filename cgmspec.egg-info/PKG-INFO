@@ -1,0 +1,10 @@
+Metadata-Version: 1.0
+Name: cgmspec
+Version: 0.1
+Summary: Python software for modeling and synthetic spectra from an idealized CGM model
+Home-page: https://github.com/ntejos/cgmspec.git
+Author: M. Hamel
+Author-email: magdalena.hamel@gmail.com
+License: UNKNOWN
+Description: UNKNOWN
+Platform: UNKNOWN
