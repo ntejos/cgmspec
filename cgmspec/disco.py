@@ -113,10 +113,8 @@ class Disco:
             ygrillmint = 0
             zgrillmint = 0
 
-
             # print('aaa',dy, xy)
             # print(dz, h)
-            import pdb; pdb.set_trace()
 
             for i in range(int(dlos / dm)):
                 dz = dz + (dm * np.cos(self.incl_rad))
@@ -205,7 +203,7 @@ class Disco:
             flux = csu.normflux(sumataus)
             return (vele, flux, Ns[0])
 
-    def plotspecandelipse(self, impar, alf, inc, radio, h, lam):
+    def plotspecandelipse(self, impar, alf, lam):
 
         flux = self.losspec(impar, alf, lam)
         # import pdb; pdb.set_trace()
@@ -214,8 +212,8 @@ class Disco:
         grid = plt.GridSpec(1, 3, wspace=0.4, hspace=0.3)
         elipse = fig.add_subplot(grid[0, 0])
         spectro = fig.add_subplot(grid[0, 1:])
-        b = radio * 2 * np.cos(self.incl_rad)
-        e1 = patches.Ellipse((0, 0), radio * 2, b, alpha=0.5)
+        b = self.R* 2 * np.cos(self.incl_rad)
+        e1 = patches.Ellipse((0, 0), self.R * 2, b, alpha=0.5)
         elipse.axis('equal')
         elipse.add_patch(e1)
         # elipse.set_xlim((-radio)-1,(radio)+1)
@@ -225,11 +223,11 @@ class Disco:
         elipse.plot(x, y, 'r*')
         eyi = -b / 2
         eyf = b / 2
-        exi = -radio
-        exf = radio
+        exi = -self.R
+        exf = self.R
         elipse.plot((0, 0), (eyi, eyf), 'k--')
         elipse.plot((exi, exf), (0, 0), 'k--')
-        elipse.set_title('incl:%s,' % inc + ' D:%s,' % impar + ' alf:%s' % alf)
+        elipse.set_title('incl:%s,' % self.incl + ' D:%s,' % impar + ' alf:%s' % alf)
         elipse.set_ylabel('kpc')
         elipse.set_xlabel('kpc')
         spectro.plot(flux[0], flux[1])
