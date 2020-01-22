@@ -1,9 +1,12 @@
 import numpy as np
 import math
+from math import log
+from astropy import constants as const
+from scipy.special import wofz
 
 """Utilities for cgmspec"""
 
-def prob_hit(r, rmin, rmax, prob_rmin=100., prob_rmax=20.):
+def prob_hit_new(r, rmin, rmax, prob_rmin=100., prob_rmax=20.):
     """
     Probability of hitting a cloud at distance r in the plane xy of a disc of radius rmax
 
@@ -20,6 +23,13 @@ def prob_hit(r, rmin, rmax, prob_rmin=100., prob_rmax=20.):
     prob = np.where(r>rmax, 0., prob)
     prob = np.where(r<rmin, prob_rmin, prob)
     return prob
+
+
+def prob_hit(r, rmax):
+    A = 100.
+    #b = np.log10(20. / A) / np.log10(rmax)
+    b = log(10/A, rmax)
+    return (A * (r ** b))
 
 
 def Tau(lam,vel):
@@ -39,9 +49,9 @@ def Tau(lam,vel):
     dnud = (b*100000)*nu/c
 
     x = dnu/dnud
-    y = gamma/(4*pi*dnud)
+    y = gamma/(4*np.pi*dnud)
     z = x + 1j*y
-    v = np.asarray(np.real(wofz(z)/(sqrt(pi)*dnud)))
+    v = np.asarray(np.real(wofz(z)/(np.sqrt(np.pi)*dnud)))
 
     taut = N * sigma0 * f  *v
     vt = np.exp(-taut)

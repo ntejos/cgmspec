@@ -30,7 +30,7 @@ class Disco:
 
         return csu.prob_hit(r, self.R)
 
-    def los_vel(self, D, al, y, vR=200):
+    def los_vel(self, D, al, y, vR=-180):
         """
         :param D: float, impact parameter in kpc
         :param al: float, angle between the major axis and the line-of-sight, clockwise, in degrees
@@ -58,6 +58,7 @@ class Disco:
         al_rad = np.radians(al)
         hdis = hdis * 1000
         x0 = (D * 1000) * np.cos(al_rad)
+
         if x0 > radio:
             yt = []
             zt = []
@@ -75,7 +76,7 @@ class Disco:
                     #       print(yt,zt)
                 incli_rad = np.radians(incli)
                 radio1 = radio
-            elif incli_rad == 0.0:
+            elif incli == 0.0:
                 yt = [D * 1000 * np.sin(al_rad), D * 1000 * np.sin(al_rad)]
                 zt = [-hdis / 2, hdis / 2]
                 incli_rad = np.radians(incli)
@@ -152,6 +153,7 @@ class Disco:
             ygrillmint = 0
             zgrillmint = 0
 
+
             # print('aaa',dy, xy)
             # print(dz, h)
             for i in range(int(dlos / dm)):
@@ -189,7 +191,8 @@ class Disco:
                     veli = self.los_vel(D, al, yp)
                     # print(veli)
 
-                    prob = self.prob_hit(rc)
+                    prob = csu.prob_hit(rc, 1000*self.R)
+                    # import pdb; pdb.set_trace()
 
                     selec = np.random.uniform(0, 100)
                     if selec < prob:
@@ -222,7 +225,9 @@ class Disco:
             return (n, velos, radios)
 
     def losspec(self, D, alp, incli, rad, h, lam):
+
         Ns = self.numnubestrue(D, alp, incli, rad, h)
+        import pdb; pdb.set_trace()
         print(Ns)
         taus = []
         if Ns[0] == 0:
@@ -243,6 +248,7 @@ class Disco:
     def plotspecandelipse(self, impar, alf, inc, radio, h, lam):
 
         flux = self.losspec(impar, alf, inc, radio, h, lam)
+        # import pdb; pdb.set_trace()
 
         fig = plt.figure(figsize=(15, 5))
         grid = plt.GridSpec(1, 3, wspace=0.4, hspace=0.3)
