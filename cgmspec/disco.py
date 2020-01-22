@@ -9,15 +9,17 @@ from astropy import constants as const
 class Disco:
     """Represents the CGM of a idealized disc projected in the sky"""
 
-    def __init__(self, R, h, incl):
+    def __init__(self, R, h, incl, Rcore=0.1):
         """
 
         :param R: float, Radius of disc in kpc
         :param h: float, height of disc in kpc
         :param incl: float, inclination angle of disc in degrees
+        :param Rcore: float, radius of disk core in kpc
         """
 
         self.R = R
+        self.Rcore = Rcore
         self.h = h
         self.incl = incl
         self.incl_rad = np.radians(self.incl)
@@ -28,97 +30,56 @@ class Disco:
         :return: float, covering fraction at distance r
         """
 
-        return csu.prob_hit(r, self.R)
+        return csu.prob_hit(r, self.Rcore, self.R)
 
-    def los_vel(self, D, al, y, vR=-180):
+    def los_vel(self, y, D, alpha, vR=180, hv=5000):
         """
+        See Ho et al. 2017
+
+        :param y: np.array, distance of the line-of-sight to the semi-major axis (x-axis) along the y-axis
         :param D: float, impact parameter in kpc
-        :param al: float, angle between the major axis and the line-of-sight, clockwise, in degrees
-        :param y: distance of the line-of-sight to the semi-major axis along the y-axis
+        :param alpha: float, angle between the major axis and the line-of-sight, clockwise, in degrees
         :param vR: maximum velocity of rotation of the disk in km/s
+        :param hv: velocity scale height in kpc
         :return: line-of-sight velocity for a cloud in the given position
+
         """
 
-        al_rad = np.radians(al)
+        al_rad = np.radians(alpha)
 
-        x0 = (D*1000) * np.cos(al_rad)
-        y0 = (D*1000) * np.sin(al_rad) / np.cos(self.incl_rad)
+        x0 = D * np.cos(al_rad)  # this is p in Ho et al. 2019, fig 10.
+        y0 = D * np.sin(al_rad) / np.cos(self.incl_rad)  # this is y0 in the same fig.
         a = np.sin(self.incl_rad) / np.sqrt(1 + (y/x0)**2)
-        vr = vR*a
+        b = np.exp(-np.fabs(y - y0) / hv * np.tan(self.incl_rad))
+        vr = vR*a*b
         return(vr)
 
-    def numnubestrue(self, D, al, incli, radio, hdis, dnub=1000):
+    def get_clouds(self, D, alpha, grid_size=1):
+        """
+        Obtain main parameters to describe clouds intersected by the sightline along the disc
+
+        :param D:
+        :param alpha:
+        :param radio:
+        :param hdis:
+        :param grid_size: size of grid in kpc to model a hit or no hit of a cloud
+        :return: (nclouds, vel_array, r_array) : (float, array, array)
+        """
 
         incli = self.incl
         radio = self.R
         hdis = self.h
+        dnub = grid_size
 
-        # print('start numnb')
-        radio = radio * 1000
-        al_rad = np.radians(al)
-        hdis = hdis * 1000
-        x0 = (D * 1000) * np.cos(al_rad)
 
-        if x0 > radio:
-            yt = []
-            zt = []
+        answer = csu.los_disc_intersect(D, incli, alpha, radio, hdis)
+        if answer is False:
+            return 0, [], []
         else:
-            # print(incli)
-            if incli == 90:
-                z0 = D * 1000 * np.sin(al_rad)
-                #   print(z0, hdis/2)
-                if abs(z0) > hdis / 2:
-                    yt = []
-                    zt = []
-                else:
-                    yt = [-np.sqrt((radio ** 2) - x0 ** 2), np.sqrt((radio ** 2) - x0 ** 2)]
-                    zt = [D * 1000 * np.sin(al_rad), D * 1000 * np.sin(al_rad)]
-                    #       print(yt,zt)
-                incli_rad = np.radians(incli)
-                radio1 = radio
-            elif incli == 0.0:
-                yt = [D * 1000 * np.sin(al_rad), D * 1000 * np.sin(al_rad)]
-                zt = [-hdis / 2, hdis / 2]
-                incli_rad = np.radians(incli)
-                radio1 = radio
-                # print(yt, zt)
-            else:
-                incli_rad = np.radians(incli)
-                y0 = (D * 1000) * np.sin(al_rad) / np.cos(incli_rad)
-                # print(y0)
-
-                z0 = 0
-
-                radio1 = np.sqrt((radio ** 2) - x0 ** 2)
-                # print(x0,y0)
-                ymin = y0 - (hdis / 2) * np.tan(incli_rad)
-                ymax = y0 + (hdis / 2) * np.tan(incli_rad)
-                zmin = -(np.sqrt((-radio1 - y0) ** 2) / np.tan(incli_rad))
-                zmax = (np.sqrt((radio1 - y0) ** 2) / np.tan(incli_rad))
-                ys = [ymin, ymax, -radio1, radio1]
-                zs = [-hdis / 2, hdis / 2, zmin, zmax]
-                yt = []
-                zt = []
-                #  print(ymin, ymax, zmin, zmax)
-
-                for i in range(len(ys)):
-                    if abs(ys[i]) < radio1:
-                        #           print(ys[i], zs[i])
-                        yt.append(ys[i])
-                        zt.append(zs[i])
-                    else:
-                        pass
-                for i in range(len(zs)):
-                    if abs(zs[i]) < hdis / 2:
-                        #           print(ys[i], zs[i])
-                        yt.append(ys[i])
-                        zt.append(zs[i])
-                    else:
-                        pass
-                yt = np.sort(yt)
-                zt = np.sort(zt)
-
-                #  print(yt,zt)
+            x0, yt1, yt2, zt1, zt2 = answer
+        yt = [yt1, yt2]
+        zt = [zt1, zt2]
+        radio1 = np.sqrt((radio ** 2) - x0 ** 2)
 
         if len(yt) == 0:
             # print('no entra al disco')
@@ -130,7 +91,7 @@ class Disco:
             zminc = zt[0]
             zmaxc = zt[1]
             # print(yminc, ymaxc)
-            dm = dnub / 10
+            dm = dnub / 10.
             dz = zminc
             dy = yminc
             nxy = int(radio1 * 2 / dnub)
@@ -143,7 +104,6 @@ class Disco:
             dlos = np.sqrt(((ymaxc - yminc) ** 2) + (zmaxc - zminc) ** 2)
             # print(dlos)
             # print(dlos/dm)
-            los = np.linspace(0, dlos, int(dlos / dm))
 
             # print(dz + len(los)*dm*sin(incli))
             n = 0
@@ -156,9 +116,11 @@ class Disco:
 
             # print('aaa',dy, xy)
             # print(dz, h)
+            import pdb; pdb.set_trace()
+
             for i in range(int(dlos / dm)):
-                dz = dz + (dm * np.cos(incli_rad))
-                dy = dy + (dm * np.sin(incli_rad))
+                dz = dz + (dm * np.cos(self.incl_rad))
+                dy = dy + (dm * np.sin(self.incl_rad))
 
                 for j in range(len(xy) - 1):
                     if xy[j] <= dy < xy[j + 1]:
@@ -188,11 +150,10 @@ class Disco:
                     rc = np.sqrt((((ygrillmax + ygrillmin) / 2) ** 2) + x0 ** 2)
                     yp = (ygrillmax + ygrillmin) / 2
                     # print(yp)
-                    veli = self.los_vel(D, al, yp)
+                    veli = self.los_vel(D, alpha, yp)
                     # print(veli)
 
-                    prob = csu.prob_hit(rc, 1000*self.R)
-                    # import pdb; pdb.set_trace()
+                    prob = self.prob_hit(rc)
 
                     selec = np.random.uniform(0, 100)
                     if selec < prob:
@@ -215,7 +176,7 @@ class Disco:
                         rc = np.sqrt((((ygrillmax + ygrillmin) / 2) ** 2) + x0 ** 2)
                         yp = (ygrillmax + ygrillmin) / 2
                         # print(yp)
-                        veli = self.los_vel(D, al, yp)
+                        veli = self.los_vel(D, alpha, yp)
                         n = n + 1
                         velos.append(veli)
                         radios.append(rc)
@@ -224,10 +185,9 @@ class Disco:
             print(ngrill)
             return (n, velos, radios)
 
-    def losspec(self, D, alp, incli, rad, h, lam):
+    def losspec(self, D, alp, lam):
 
-        Ns = self.numnubestrue(D, alp, incli, rad, h)
-        import pdb; pdb.set_trace()
+        Ns = self.get_clouds(D, alp)
         print(Ns)
         taus = []
         if Ns[0] == 0:
@@ -247,7 +207,7 @@ class Disco:
 
     def plotspecandelipse(self, impar, alf, inc, radio, h, lam):
 
-        flux = self.losspec(impar, alf, inc, radio, h, lam)
+        flux = self.losspec(impar, alf, lam)
         # import pdb; pdb.set_trace()
 
         fig = plt.figure(figsize=(15, 5))

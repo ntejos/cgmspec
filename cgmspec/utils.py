@@ -6,7 +6,7 @@ from scipy.special import wofz
 
 """Utilities for cgmspec"""
 
-def prob_hit_new(r, rmin, rmax, prob_rmin=100., prob_rmax=20.):
+def prob_hit(r, rmin, rmax, prob_rmin=100., prob_rmax=20.):
     """
     Probability of hitting a cloud at distance r in the plane xy of a disc of radius rmax
 
@@ -21,15 +21,80 @@ def prob_hit_new(r, rmin, rmax, prob_rmin=100., prob_rmax=20.):
     b = np.log10(prob_rmax / prob_rmin) / np.log10(rmax)
     prob = prob_rmin * (r ** b)
     prob = np.where(r>rmax, 0., prob)
-    prob = np.where(r<rmin, prob_rmin, prob)
+    prob = np.where(r<=rmin, prob_rmin, prob)
     return prob
 
 
-def prob_hit(r, rmax):
-    A = 100.
-    #b = np.log10(20. / A) / np.log10(rmax)
-    b = log(10/A, rmax)
-    return (A * (r ** b))
+def los_disc_intersect(D, i, alpha, R, h):
+    """For a given set of (i, D, alpha) + (R, h), this function return (x0, yt1, yt2, zt1, zt2)
+    If the sightline does not intersect the disk, it returns False
+    """
+
+    radio = R
+    hdis = h
+    incli = i
+
+    al_rad = np.radians(alpha)
+    x0 = D * np.cos(al_rad)
+
+    # check if sightline intersects the disk
+    if x0 > radio:
+        return False
+
+    if incli == 90:  # edge-on
+        z0 = D * np.sin(al_rad)
+        if np.fabs(z0) > hdis / 2.:
+            return False  # outside projected disk
+        else:
+            yt = [-np.sqrt((radio ** 2) - x0 ** 2), np.sqrt((radio ** 2) - x0 ** 2)]
+            zt = [D * np.sin(al_rad), D * np.sin(al_rad)]
+
+    elif incli == 0.0:  # face-on
+        yt = [D * np.sin(al_rad), D * np.sin(al_rad)]
+        zt = [-hdis / 2, hdis / 2]
+        incli_rad = np.radians(incli)
+        # print(yt, zt)
+
+    else:
+        incli_rad = np.radians(incli)
+        y0 = D * np.sin(al_rad) / np.cos(incli_rad)
+        # print(y0)
+
+        z0 = 0
+
+        radio1 = np.sqrt((radio ** 2) - x0 ** 2)
+        # print(x0,y0)
+        ymin = y0 - (hdis / 2) * np.tan(incli_rad)
+        ymax = y0 + (hdis / 2) * np.tan(incli_rad)
+        zmin = -(np.sqrt((-radio1 - y0) ** 2) / np.tan(incli_rad))
+        zmax = (np.sqrt((radio1 - y0) ** 2) / np.tan(incli_rad))
+        ys = [ymin, ymax, -radio1, radio1]
+        zs = [-hdis / 2, hdis / 2, zmin, zmax]
+        yt = []
+        zt = []
+        #  print(ymin, ymax, zmin, zmax)
+
+        for i in range(len(ys)):
+            if abs(ys[i]) < radio1:
+                #           print(ys[i], zs[i])
+                yt.append(ys[i])
+                zt.append(zs[i])
+            else:
+                pass
+        for i in range(len(zs)):
+            if abs(zs[i]) < hdis / 2:
+                 #           print(ys[i], zs[i])
+                yt.append(ys[i])
+                zt.append(zs[i])
+            else:
+                pass
+
+        yt = np.sort(yt)
+        zt = np.sort(zt)
+
+    #  print(yt,zt)
+    return x0, yt[0], yt[1], zt[0], zt[1]
+
 
 
 def Tau(lam,vel):
