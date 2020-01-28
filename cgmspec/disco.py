@@ -183,9 +183,9 @@ class Disco:
             print(ngrill)
             return (n, velos, radios)
 
-    def losspec(self, D, alp, lam):
+    def losspec(self, D, alpha, lam):
 
-        Ns = self.get_clouds(D, alp)
+        Ns = self.get_clouds(D, alpha)
         print(Ns)
         taus = []
         if Ns[0] == 0:
@@ -203,9 +203,9 @@ class Disco:
             flux = csu.normflux(sumataus)
             return (vele, flux, Ns[0])
 
-    def plotspecandelipse(self, impar, alf, lam):
+    def plotspecandelipse(self, D, alpha, lam):
 
-        flux = self.losspec(impar, alf, lam)
+        flux = self.losspec(D, alpha, lam)
         # import pdb; pdb.set_trace()
 
         fig = plt.figure(figsize=(15, 5))
@@ -218,8 +218,8 @@ class Disco:
         elipse.add_patch(e1)
         # elipse.set_xlim((-radio)-1,(radio)+1)
         # elipse.set_ylim((-radio)-1,(radio)+1)
-        x = impar * np.cos(np.radians(alf))
-        y = impar * np.sin(np.radians(alf))
+        x = D * np.cos(np.radians(alpha))
+        y = D * np.sin(np.radians(alpha))
         elipse.plot(x, y, 'r*')
         eyi = -b / 2
         eyf = b / 2
@@ -227,7 +227,7 @@ class Disco:
         exf = self.R
         elipse.plot((0, 0), (eyi, eyf), 'k--')
         elipse.plot((exi, exf), (0, 0), 'k--')
-        elipse.set_title('incl:%s,' % self.incl + ' D:%s,' % impar + ' alf:%s' % alf)
+        elipse.set_title('incl:%s,' % self.incl + ' D:%s,' % D + ' alf:%s' % alpha)
         elipse.set_ylabel('kpc')
         elipse.set_xlabel('kpc')
         spectro.plot(flux[0], flux[1])
