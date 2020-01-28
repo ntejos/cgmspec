@@ -3,6 +3,7 @@ from cgmspec import utils as csu
 from matplotlib import pyplot as plt
 from matplotlib import patches
 from astropy import constants as const
+from matplotlib.pyplot import cm
 
 """This Class Disco represents the CGM of a galaxy from a disc model"""
 
@@ -58,10 +59,8 @@ class Disco:
         """
         Obtain main parameters to describe clouds intersected by the sightline along the disc
 
-        :param D:
-        :param alpha:
-        :param radio:
-        :param hdis:
+        :param D: float, impact parameter in kpc
+        :param alpha: float, angle between the major axis and the line-of-sight, clockwise, in degrees
         :param grid_size: size of grid in kpc to model a hit or no hit of a cloud
         :return: (nclouds, vel_array, r_array) : (float, array, array)
         """
@@ -184,6 +183,14 @@ class Disco:
             return (n, velos, radios)
 
     def losspec(self, D, alpha, lam):
+        """
+        Obtain the spectra for a LOS crossing the disk in velocity scale
+
+        :param D: float, impact parameter in kpc
+        :param alpha: float, angle between the major axis and the line-of-sight, clockwise, in degrees
+        :lam: array, wavelenghts where the spectra is calculated
+        :return: (vele, flux, nclouds) : (array, array, float)
+        """
 
         Ns = self.get_clouds(D, alpha)
         print(Ns)
@@ -204,6 +211,14 @@ class Disco:
             return (vele, flux, Ns[0])
 
     def plotspecandelipse(self, D, alpha, lam):
+        """
+        Returns a figure with two plots. On the left is the disk proyected in the sky plane and the LOS position, in the right the spectra generated.
+
+        :param D: float, impact parameter in kpc
+        :param alpha: float, angle between the major axis and the line-of-sight, clockwise, in degrees
+        :lam: array, wavelenghts where the spectra is calculated
+        :return: Plot
+        """
 
         flux = self.losspec(D, alpha, lam)
         # import pdb; pdb.set_trace()
@@ -240,5 +255,48 @@ class Disco:
         spectro.set_ylabel('Norm. Flux')
         plt.show()
 
-    def spec_clouds(self):
-        pass
+    def plotmanylos(self, D, alpha, lam):
+        """
+        Returns a figure with many LOS in the disk
+        :param D: array, impact parameters in kpc
+        :param alpha: array, angles between the major axis and the line-of-sight, clockwise, in degrees
+        :lam: array, wavelenghts where the spectra is calculated
+        :return: Plot
+        """
+
+        fluxes = []
+        for i in range(len(D)):
+            flux = self.losspec(D[i], alpha[i],lam)
+            fluxes.append(flux)
+
+        fig = plt.figure(figsize=(15, 5))
+        grid = plt.GridSpec(1, 3, wspace=0.4, hspace=0.3)
+        elipse = fig.add_subplot(grid[0, 0])
+        spectro = fig.add_subplot(grid[0, 1:])
+        b = self.R* 2 * np.cos(self.incl_rad)
+        e1 = patches.Ellipse((0, 0), self.R * 2, b, alpha=0.5)
+        elipse.axis('equal')
+        elipse.add_patch(e1)
+        color=cm.rainbow(np.linspace(0,1,len(fluxes)))
+
+        for i in range(len(fluxes)):
+            x = D[i] * np.cos(np.radians(alpha[i]))
+            y = D[i] * np.sin(np.radians(alpha[i]))
+            elipse.plot(x, y, color=color[i], marker='*')
+            spectro.plot(fluxes[i][0], fluxes[i][1], color=color[i])
+        eyi = -b / 2
+        eyf = b / 2
+        exi = -self.R
+        exf = self.R
+        elipse.plot((0, 0), (eyi, eyf), 'k--')
+        elipse.plot((exi, exf), (0, 0), 'k--')
+        elipse.set_title('incl:%s,' % self.incl + ' D:%s,' % D + ' alf:%s' % alpha)
+        elipse.set_ylabel('kpc')
+        elipse.set_xlabel('kpc')
+        spectro.set_ylim(-0.05, 1.05)
+        spectro.set_xlim(-300, 300)
+        spectro.axvline(ls='--', lw=1)
+        spectro.axhline(ls='--', lw=1)
+        spectro.set_xlabel('LOS vel [km/s]')
+        spectro.set_ylabel('Norm. Flux')
+        plt.show()

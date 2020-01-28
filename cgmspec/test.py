@@ -15,7 +15,7 @@ h = 10.  # disk height in kpc
 
 model_1 = Disco(R, h, incl, Rcore=0.1)
 
-model_1.plotspecandelipse(D, alpha, incl, R, h, lam1)
+model_1.plotspecandelipse(D, alpha, lam1)
 plt.show()
 
 # test prob_hit
@@ -34,4 +34,3 @@ y = np.linspace(-1.1*R, 1.1*R, 1000)
 vel_1 = model_1.los_vel(y, D, alpha, vR=200., hv = 5000)
 plt.plot(y, vel_1)
 plt.show()
-
