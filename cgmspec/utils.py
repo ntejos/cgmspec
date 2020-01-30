@@ -100,9 +100,9 @@ def los_disc_intersect(D, i, alpha, R, h):
 def Tau(lam,vel):
     N = 10**(14)
     redshift = 0.7
-    b = 10
+    b = 5
 
-    lam0, f, gamma, mass = [2852, 0.6155, 2.68e8, 24.305]
+    lam0, f, gamma, mass = [2796, 0.6155, 2.68e8, 24.305]
     c  = const.c.to('cm/s').value
     sigma0 = 0.0263
 

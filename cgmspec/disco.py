@@ -33,7 +33,7 @@ class Disco:
 
         return csu.prob_hit(r, self.Rcore, self.R)
 
-    def los_vel(self, y, D, alpha, vR=180, hv=5000):
+    def los_vel(self, y, D, alpha, vR=200, hv=5000):
         """
         See Ho et al. 2017
 
@@ -51,8 +51,12 @@ class Disco:
         x0 = D * np.cos(al_rad)  # this is p in Ho et al. 2019, fig 10.
         y0 = D * np.sin(al_rad) / np.cos(self.incl_rad)  # this is y0 in the same fig.
         a = np.sin(self.incl_rad) / np.sqrt(1 + (y/x0)**2)
+        print(a,y,y0)
         b = np.exp(-np.fabs(y - y0) / hv * np.tan(self.incl_rad))
-        vr = vR*a*b
+        print(b)
+        vr = vR*a
+
+
         return(vr)
 
     def get_clouds(self, D, alpha, grid_size=1):
@@ -79,6 +83,7 @@ class Disco:
         yt = [yt1, yt2]
         zt = [zt1, zt2]
         radio1 = np.sqrt((radio ** 2) - x0 ** 2)
+        print('aaaaa', yt, zt)
 
         if len(yt) == 0:
             # print('no entra al disco')
@@ -147,7 +152,7 @@ class Disco:
                     rc = np.sqrt((((ygrillmax + ygrillmin) / 2) ** 2) + x0 ** 2)
                     yp = (ygrillmax + ygrillmin) / 2
                     # print(yp)
-                    veli = self.los_vel(D, alpha, yp)
+                    veli = self.los_vel(yp, D, alpha)
                     # print(veli)
 
                     prob = self.prob_hit(rc)
@@ -163,7 +168,7 @@ class Disco:
                     # print(zgrillmint, zgrillmin)
                     zgrillmint = zgrillmin
                     ngrill = ngrill + 1
-
+                    rc = np.sqrt((((ygrillmax + ygrillmin) / 2) ** 2) + x0 ** 2)
                     # print(veli)
 
                     prob = self.prob_hit(rc)
@@ -203,7 +208,7 @@ class Disco:
                 tau = csu.Tau(lam, vel)
                 taus.append(tau)
             # print(taus[0])
-            vele = (const.c.to('km/s').value * ((lam / (2852 * (1 + 0.7))) - 1))
+            vele = (const.c.to('km/s').value * ((lam / (2796 * (1 + 0.7))) - 1))
             # print(len(taus))
             # print(len(taus[0]))
             sumataus = csu.sumtau(taus)

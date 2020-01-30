@@ -31,7 +31,7 @@ dnub = 1000 #diametro de las nubes en pc
 #Velocidades
 
 hv = 5000 #kpc  -----> parametro libre
-vR = -118 #km/s ----> parametro libre
+vR = 200 #km/s ----> parametro libre
 
 #velobs = np.load('vel1.npy')
 
@@ -53,7 +53,7 @@ def vel(D, incl, al, y):
     a = sin(incl)/sqrt(1+(y/x0)**2)
     b = exp(-abs(y-y0)/hv*tan(incl))
 
-    vr = vR*a
+    vr = vR*a*b
     print('end vel')
     return(vr)
 

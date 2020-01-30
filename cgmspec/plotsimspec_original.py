@@ -1,4 +1,4 @@
-import disco
+import disco_original as disco
 import pylab as plt
 from math import pi, sqrt, sin, cos, radians
 from matplotlib import patches
@@ -37,8 +37,8 @@ def plotspecandelipse(impar, alf, inc, radio,h, lam):
     elipse.add_patch(e1)
     #elipse.set_xlim((-radio)-1,(radio)+1)
     #elipse.set_ylim((-radio)-1,(radio)+1)
-    x = impar * cos(radians(81))
-    y = impar * sin(radians(81))
+    x = impar * cos(radians(alf))
+    y = impar * sin(radians(alf))
     elipse.plot(x,y,'r*')
     eyi = -b/2
     eyf = b/2
@@ -61,4 +61,4 @@ def plotspecandelipse(impar, alf, inc, radio,h, lam):
 
 
 lam1 = disco.lamda(4000, 5500, 0.1)
-plotspecandelipse(16.8,99,75,100,10,lam1)
+plotspecandelipse(10, 5,90,30,10,lam1)
