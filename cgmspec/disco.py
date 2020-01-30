@@ -50,11 +50,14 @@ class Disco:
 
         x0 = D * np.cos(al_rad)  # this is p in Ho et al. 2019, fig 10.
         y0 = D * np.sin(al_rad) / np.cos(self.incl_rad)  # this is y0 in the same fig.
-        a = np.sin(self.incl_rad) / np.sqrt(1 + (y/x0)**2)
-        print(a,y,y0)
+        if x0>=0:
+              a = np.sin(self.incl_rad) / np.sqrt(1 + (y/x0)**2)
+        else:
+            a = - np.sin(self.incl_rad) / np.sqrt(1 + (y/x0)**2)
+        
         b = np.exp(-np.fabs(y - y0) / hv * np.tan(self.incl_rad))
         print(b)
-        vr = vR*a
+        vr = vR*a*b
 
 
         return(vr)
@@ -132,7 +135,7 @@ class Disco:
                         pass
                         # ygrillmin = dy
                         # ygrillmax = dy
-                for k in range(len(h)):
+                for k in range(len(h)-1):
                     if h[k] < dz < h[k + 1]:
                         zgrillmin = h[k]
                         zgrillmax = h[k + 1]
@@ -175,10 +178,9 @@ class Disco:
 
                     selec = np.random.uniform(0, 100)
                     if selec < prob:
-                        rc = np.sqrt((((ygrillmax + ygrillmin) / 2) ** 2) + x0 ** 2)
                         yp = (ygrillmax + ygrillmin) / 2
                         # print(yp)
-                        veli = self.los_vel(D, alpha, yp)
+                        veli = self.los_vel(yp, D, alpha)
                         n = n + 1
                         velos.append(veli)
                         radios.append(rc)
@@ -215,6 +217,45 @@ class Disco:
             flux = csu.normflux(sumataus)
             return (vele, flux, Ns[0])
 
+
+    def averagelosspec(self, D, alpha, lam, iter):
+        """
+        Obtain the spectra for a LOS crossing the disk in velocity scale
+
+        :param D: float, impact parameter in kpc
+        :param alpha: float, angle between the major axis and the line-of-sight, clockwise, in degrees
+        :lam: array, wavelenghts where the spectra is calculated
+        :iter: numer of iterations to do the average
+        :return: (vele, flux, nclouds) : (array, array, float)
+        """
+        flux_to_average = []
+        nclouds_to_average = []
+
+        for i in range(iter):
+             Ns = self.get_clouds(D, alpha)
+             taus = []
+             if Ns[0] == 0:
+                 nclouds_to_average.append(0)
+             else:
+                 for i in range(len(Ns[1])):
+                     vel = Ns[1][i]
+                     tau = csu.Tau(lam, vel)
+                     taus.append(tau)
+            # print(taus[0])
+            # print(len(taus))
+            # print(len(taus[0]))
+                 sumataus = csu.sumtau(taus)
+                 flux = csu.normflux(sumataus)
+                 flux_to_average.append(flux)
+                 nclouds_to_average.append(Ns[0])
+        vele = (const.c.to('km/s').value * ((lam / (2796 * (1 + 0.7))) - 1))
+        flux_to_average = np.asarray(flux_to_average)
+        nclouds_to_average = np.asarray(nclouds_to_average)
+        average_flux = np.average(flux_to_average, axis=0)
+        average_nclouds = np.average(nclouds_to_average)
+        return (vele, average_flux, average_nclouds)
+
+
     def plotspecandelipse(self, D, alpha, lam):
         """
         Returns a figure with two plots. On the left is the disk proyected in the sky plane and the LOS position, in the right the spectra generated.
@@ -239,7 +280,7 @@ class Disco:
         # elipse.set_xlim((-radio)-1,(radio)+1)
         # elipse.set_ylim((-radio)-1,(radio)+1)
         x = D * np.cos(np.radians(alpha))
-        y = D * np.sin(np.radians(alpha))
+        y = -D * np.sin(np.radians(alpha))
         elipse.plot(x, y, 'r*')
         eyi = -b / 2
         eyf = b / 2
@@ -286,7 +327,7 @@ class Disco:
 
         for i in range(len(fluxes)):
             x = D[i] * np.cos(np.radians(alpha[i]))
-            y = D[i] * np.sin(np.radians(alpha[i]))
+            y = -D[i] * np.sin(np.radians(alpha[i]))
             elipse.plot(x, y, color=color[i], marker='*')
             spectro.plot(fluxes[i][0], fluxes[i][1], color=color[i])
         eyi = -b / 2
@@ -305,3 +346,6 @@ class Disco:
         spectro.set_xlabel('LOS vel [km/s]')
         spectro.set_ylabel('Norm. Flux')
         plt.show()
+
+
+    #def plot_aver_spax():
