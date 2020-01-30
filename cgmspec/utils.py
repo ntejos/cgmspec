@@ -18,10 +18,16 @@ def prob_hit(r, rmin, rmax, prob_rmin=100., prob_rmax=20.):
     :return: float, probability of hitting a cloud
     """
 
-    b = np.log10(prob_rmax / prob_rmin) / np.log10(rmax)
-    prob = prob_rmin * (r ** b)
+    ind = np.log(prob_rmin/prob_rmax)/np.log(rmin/rmax)
+    A = prob_rmax/(rmax**(ind))
+    prob = A*(r**(ind))
     prob = np.where(r>rmax, 0., prob)
     prob = np.where(r<=rmin, prob_rmin, prob)
+
+    '''b = np.log10(prob_rmax / prob_rmin) / np.log10(rmax)
+    prob = prob_rmin * (r ** b)
+    prob = np.where(r>rmax, 0., prob)
+    prob = np.where(r<=rmin, prob_rmin, prob)'''
     return prob
 
 
