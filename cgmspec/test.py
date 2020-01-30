@@ -18,7 +18,7 @@ model_1 = Disco(R, h, incl, Rcore=0.1)
 '''model_1.plotspecandelipse(D, alpha, lam1)
 plt.show()
 
-# test prob_hit
+ test prob_hit'''
 r = np.arange(0,200, 1)
 prob_util = csu.prob_hit(r, rmin=1, rmax=R)
 prob_disc = model_1.prob_hit(r)
@@ -30,11 +30,11 @@ plt.show()
 
 
 # test los_vel
-y = np.linspace(-1.1*R, 1.1*R, 1000)
+'''y = np.linspace(-1.1*R, 1.1*R, 1000)
 vel_1 = model_1.los_vel(y, D, alpha, vR=200., hv = 5000)
 plt.plot(y, vel_1)
-plt.show()'''
+plt.show()
 
 Ds  = np.asarray((20,20))
 alphas = np.asarray((90,270))
-model_1.plotmanylos(Ds,alphas,lam1)
+model_1.plotmanylos(Ds,alphas,lam1)'''
