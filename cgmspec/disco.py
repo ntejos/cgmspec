@@ -10,7 +10,7 @@ from matplotlib.pyplot import cm
 class Disco:
     """Represents the CGM of a idealized disc projected in the sky"""
 
-    def __init__(self, R, h, incl, Rcore=0.1):
+    def __init__(self,h, incl, Rcore=0.1):
         """
 
         :param R: float, Radius of disc in kpc
@@ -19,21 +19,20 @@ class Disco:
         :param Rcore: float, radius of disk core in kpc
         """
 
-        self.R = R
         self.Rcore = Rcore
         self.h = h
         self.incl = incl
         self.incl_rad = np.radians(self.incl)
 
-    def prob_hit(self, r):
+    def prob_hit(self, r, r_0):
         """
         :param r: float, distance to the center of disc in plane xy in kpc
         :return: float, covering fraction at distance r
         """
 
-        return csu.prob_hit(r, self.Rcore, self.R)
+        return csu.prob_hit(r, self.Rcore, r_0)
 
-    def los_vel(self, y, D, alpha, vR=200, hv=5000):
+    def los_vel(self, y, D, alpha, v_inf,vR=196, hv=10):
         """
         See Ho et al. 2017
 
@@ -46,23 +45,86 @@ class Disco:
 
         """
 
+        v_los_inf = (v_inf * np.sin(self.incl_rad)) * (y/(np.sqrt((y**2) + D**2)))
         al_rad = np.radians(alpha)
+
+        R = D * np.sqrt(1+(np.sin(al_rad)**2)*np.tan(self.incl_rad)**2)
+        vrot = (2/np.pi)*np.arctan2(R,1)
 
         x0 = D * np.cos(al_rad)  # this is p in Ho et al. 2019, fig 10.
         y0 = D * np.sin(al_rad) / np.cos(self.incl_rad)  # this is y0 in the same fig.
         if x0>=0:
               a = np.sin(self.incl_rad) / np.sqrt(1 + (y/x0)**2)
         else:
-            a = - np.sin(self.incl_rad) / np.sqrt(1 + (y/x0)**2)
-        
+            a = np.sin(self.incl_rad) / np.sqrt(1 + (y/x0)**2)
+
         b = np.exp(-np.fabs(y - y0) / hv * np.tan(self.incl_rad))
-        print(b)
-        vr = vR*a*b
+        #print(b)
+        vr = (vR*vrot*a*b) + v_los_inf
 
 
         return(vr)
 
-    def get_clouds(self, D, alpha, grid_size=1):
+    def get_cells(self,D,alpha,size):
+
+        h = self.h
+        incli = self.incl
+
+        m = -np.tan(np.radians(incli))
+        y0 = D*np.sin(np.radians(alpha))/np.cos(np.radians(incli))
+        n = -m*y0
+        y1 = ((h/2)-n)/m
+        y2 = (-(h/2)-n)/m
+
+        z1 = h/2
+        z2 = -h/2
+        print('y1,y2', y1, y2)
+        t = 0
+        y = y1
+        z = z1
+        loslenght = np.sqrt(((y2-y1)**2)+(z2-z1)**2)
+        if y1<0:
+            nygrill = int(y1/size)
+        else:
+            nygrill = int((y1/size)-1)
+
+        nzgrill = int((h/2)/size)
+        print('grillas', nygrill, nzgrill)
+
+        cellnum = 0
+        cellpos = []
+        ylos = np.linspace(y1,y2, 100)
+        zlos = n + m*ylos
+
+        while t<loslenght:
+              print('grillas', nygrill, nzgrill)
+              ypos = (size*nygrill)+(size/2)
+              zpos = (size*nzgrill)-(size/2)
+              print('posicion', ypos,zpos)
+              cellpos.append([ypos,zpos])
+              cellnum = cellnum+1
+              nexty = ((nygrill+1)*size, n+(m*(nygrill+1)*size))
+              dnexty = np.sqrt(((nexty[0]-y)**2)+ (nexty[1]-z)**2)
+              nextz = ((((nzgrill-1)*size)-n)/m, (nzgrill-1)*size)
+              dnextz = np.sqrt(((nextz[0]-y)**2)+ (nextz[1]-z)**2)
+
+              if dnexty < dnextz:
+                  print(0)
+                  t = t + dnexty
+                  y = nexty[0]
+                  z = nexty[1]
+                  nygrill = nygrill+1
+
+              else:
+                  print(1)
+                  t = t + dnextz
+                  y = nextz[0]
+                  z = nextz[1]
+                  nzgrill = nzgrill-1
+
+        return(cellnum, cellpos)
+
+    def get_clouds(self, grids, D, alpha, grid_size, r_0, v_max, h_v, v_inf):
         """
         Obtain main parameters to describe clouds intersected by the sightline along the disc
 
@@ -73,152 +135,36 @@ class Disco:
         """
 
         incli = self.incl
-        radio = self.R
         hdis = self.h
-        dnub = grid_size
+
+        al_rad = np.radians(alpha)
+        x0 = D * np.cos(al_rad)
+        n = 0
+        ngrill = 0
+        velos = []
+        radios = []
+
+        #answer = csu.los_disc_intersect(D, incli, alpha, radio, hdis)
+
+        #print('aaaaa', yt, zt)
+        for i in range(len(grids[1])):
+            rc = np.sqrt((grids[1][i][0] ** 2) + x0 ** 2)
+            prob = self.prob_hit(rc, r_0 )
+            selec = np.random.uniform(0, 100)
+
+            if selec < prob:
+                # print(yp)
+                veli = self.los_vel(grids[1][i][0], D, alpha, v_inf, v_max, h_v)
+                n = n + 1
+                velos.append(veli)
+                radios.append(rc)
+            else:
+                pass
+
+        return(n, velos, radios)
 
 
-        answer = csu.los_disc_intersect(D, incli, alpha, radio, hdis)
-        if answer is False:
-            return 0, [], []
-        else:
-            x0, yt1, yt2, zt1, zt2 = answer
-        yt = [yt1, yt2]
-        zt = [zt1, zt2]
-        radio1 = np.sqrt((radio ** 2) - x0 ** 2)
-        print('aaaaa', yt, zt)
-
-        if len(yt) == 0:
-            # print('no entra al disco')
-            return (0, [], [])
-        else:
-            # print(radio)
-            yminc = yt[0]
-            ymaxc = yt[1]
-            zminc = zt[0]
-            zmaxc = zt[1]
-            # print(yminc, ymaxc)
-            dm = dnub / 10.
-            dz = zminc
-            dy = yminc
-            nxy = int(radio1 * 2 / dnub)
-
-            nh = int(hdis / dnub)
-            # print('nh', nh)
-            xy = np.linspace(-radio1, radio1, nxy + 1)
-            h = np.linspace(-hdis / 2, hdis / 2, nh + 1)
-            # print(h)
-            dlos = np.sqrt(((ymaxc - yminc) ** 2) + (zmaxc - zminc) ** 2)
-            # print(dlos)
-            # print(dlos/dm)
-
-            # print(dz + len(los)*dm*sin(incli))
-            n = 0
-            ngrill = 0
-            velos = []
-            radios = []
-            ygrillmint = 0
-            zgrillmint = 0
-
-            # print('aaa',dy, xy)
-            # print(dz, h)
-
-            for i in range(int(dlos / dm)):
-                dz = dz + (dm * np.cos(self.incl_rad))
-                dy = dy + (dm * np.sin(self.incl_rad))
-
-                for j in range(len(xy) - 1):
-                    if xy[j] <= dy < xy[j + 1]:
-                        ygrillmin = xy[j]
-                        ygrillmax = xy[j + 1]
-                    else:
-                        pass
-                        # ygrillmin = dy
-                        # ygrillmax = dy
-                for k in range(len(h)-1):
-                    if h[k] < dz < h[k + 1]:
-                        zgrillmin = h[k]
-                        zgrillmax = h[k + 1]
-                    else:
-                        pass
-                        # zgrillmin = dz
-                        # zgrillmax = dz
-                # print('y', ygrillmin, ygrillmax)
-                # print('z', zgrillmin, zgrillmax)
-
-                if ygrillmin == ygrillmint and zgrillmin == zgrillmint:
-                    pass
-                elif ygrillmin != ygrillmint:
-                    # print(ygrillmint, ygrillmin)
-                    ygrillmint = ygrillmin
-                    ngrill = ngrill + 1
-                    rc = np.sqrt((((ygrillmax + ygrillmin) / 2) ** 2) + x0 ** 2)
-                    yp = (ygrillmax + ygrillmin) / 2
-                    # print(yp)
-                    veli = self.los_vel(yp, D, alpha)
-                    # print(veli)
-
-                    prob = self.prob_hit(rc)
-
-                    selec = np.random.uniform(0, 100)
-                    if selec < prob:
-                        n = n + 1
-                        velos.append(veli)
-                        radios.append(rc)
-                    else:
-                        pass
-                elif zgrillmin != zgrillmint:
-                    # print(zgrillmint, zgrillmin)
-                    zgrillmint = zgrillmin
-                    ngrill = ngrill + 1
-                    rc = np.sqrt((((ygrillmax + ygrillmin) / 2) ** 2) + x0 ** 2)
-                    # print(veli)
-
-                    prob = self.prob_hit(rc)
-
-                    selec = np.random.uniform(0, 100)
-                    if selec < prob:
-                        yp = (ygrillmax + ygrillmin) / 2
-                        # print(yp)
-                        veli = self.los_vel(yp, D, alpha)
-                        n = n + 1
-                        velos.append(veli)
-                        radios.append(rc)
-
-                        # print(1,dy,dz)
-            print(ngrill)
-            return (n, velos, radios)
-
-    def losspec(self, D, alpha, lam):
-        """
-        Obtain the spectra for a LOS crossing the disk in velocity scale
-
-        :param D: float, impact parameter in kpc
-        :param alpha: float, angle between the major axis and the line-of-sight, clockwise, in degrees
-        :lam: array, wavelenghts where the spectra is calculated
-        :return: (vele, flux, nclouds) : (array, array, float)
-        """
-
-        Ns = self.get_clouds(D, alpha)
-        print(Ns)
-        taus = []
-        if Ns[0] == 0:
-            return ([], [])
-        else:
-            for i in range(len(Ns[1])):
-                vel = Ns[1][i]
-                tau = csu.Tau(lam, vel)
-                taus.append(tau)
-            # print(taus[0])
-            vele = (const.c.to('km/s').value * ((lam / (2796 * (1 + 0.7))) - 1))
-            # print(len(taus))
-            # print(len(taus[0]))
-            sumataus = csu.sumtau(taus)
-            flux = csu.normflux(sumataus)
-            return (vele, flux, Ns[0])
-
-
-    def averagelosspec(self, D, alpha, lam, iter):
+    def averagelosspec(self, D, alpha, lam, iter,X, z, grid_size, N, b, r_0, v_max, h_v, v_inf):
         """
         Obtain the spectra for a LOS crossing the disk in velocity scale
 
@@ -228,35 +174,70 @@ class Disco:
         :iter: numer of iterations to do the average
         :return: (vele, flux, nclouds) : (array, array, float)
         """
-        flux_to_average = []
+
+
+
+
+        print('incl',self.incl)
+
+        if X == 1:
+            lam0 = 2796.35
+        if X ==2:
+            lam0 = 2803.53
+        if X == 12:
+            lam0 = 2796.35
+
+        vele1 = (const.c.to('km/s').value * ((lam / (lam0 * (1 + z))) - 1))
+
+        grids = self.get_cells(D,alpha,grid_size)
+        print(grids)
+        flux_to_average1 = []
+        flux_to_average2 = []
         nclouds_to_average = []
+        vele = []
+        average_flux = []
 
         for i in range(iter):
-             Ns = self.get_clouds(D, alpha)
-             taus = []
-             if Ns[0] == 0:
+
+            Ns = self.get_clouds(grids, D, alpha, grid_size, r_0, v_max, h_v, v_inf)
+
+            print(Ns)
+
+            taus1 = []
+
+            if Ns[0] == 0:
                  nclouds_to_average.append(0)
-             else:
+                 flux = np.ones(len(lam))
+                 flux_to_average1.append(flux)
+
+
+            else:
                  for i in range(len(Ns[1])):
                      vel = Ns[1][i]
-                     tau = csu.Tau(lam, vel)
-                     taus.append(tau)
+                     tau1 = csu.Tau(lam, vel, X, N, b)
+                     taus1.append(tau1)
+
             # print(taus[0])
             # print(len(taus))
             # print(len(taus[0]))
-                 sumataus = csu.sumtau(taus)
-                 flux = csu.normflux(sumataus)
-                 flux_to_average.append(flux)
+                 sumataus1 = csu.sumtau(taus1)
+                 flux1 = csu.normflux(sumataus1)
+                 flux_to_average1.append(flux1)
                  nclouds_to_average.append(Ns[0])
-        vele = (const.c.to('km/s').value * ((lam / (2796 * (1 + 0.7))) - 1))
-        flux_to_average = np.asarray(flux_to_average)
+
+
+        vele.append(vele1)
+        vele = np.asarray(vele)
+        flux_to_average1 = np.asarray(flux_to_average1)
+        #print('aa', flux_to_average1)
         nclouds_to_average = np.asarray(nclouds_to_average)
-        average_flux = np.average(flux_to_average, axis=0)
-        average_nclouds = np.average(nclouds_to_average)
-        return (vele, average_flux, average_nclouds)
+        average_flux1 = np.median(flux_to_average1, axis=0)
+    #    print('bb', len(average_flux1), len(average_flux2))
+        average_nclouds = np.median(nclouds_to_average)
+        return (vele1, average_flux1, average_nclouds)
 
 
-    def plotspecandelipse(self, D, alpha, lam):
+    '''def plotspecandelipse(self, D, alpha, lam, iter,X, z, grid_size, N, b, prob_rmax, prob_rmin):
         """
         Returns a figure with two plots. On the left is the disk proyected in the sky plane and the LOS position, in the right the spectra generated.
 
@@ -266,7 +247,8 @@ class Disco:
         :return: Plot
         """
 
-        flux = self.losspec(D, alpha, lam)
+        flux = self.averagelosspec(D, alpha, lam, iter,X, z, grid_size, N, b, prob_rmax, prob_rmin)[1]
+
         # import pdb; pdb.set_trace()
 
         fig = plt.figure(figsize=(15, 5))
@@ -348,4 +330,50 @@ class Disco:
         plt.show()
 
 
-    #def plot_aver_spax():
+    def plot_aver_spax(self, D, alpha, lam, sizex, sizey):
+
+        alpha_rad = np.radians(alpha)
+        xc = D*np.sin(alpha_rad)
+        yc = -D*np.cos(alpha_rad)
+        p0 = (xc, yc)
+        p1 = (xc, yc+sizey)
+        p2 = (xc+sizex, yc)
+        p3 = (xc, yc-sizey)
+        p4 =  (xc-sizex, yc)
+        ps = np.asarray((p0,p1,p2,p3,p4))
+        #print(ps)
+
+        Ds =  []
+        alphas =  []
+        #print('ln',len(ps))
+        for i in range(len(ps)):
+            #print('jajaja', ps[i][0], ps[i][1])
+            #print(ps[i][1]/ps[i][0])
+            alpha = -np.arctan2(ps[i][1],ps[i][0])
+            #print('al',alpha)
+            D = ps[i][0]/np.cos(alpha)
+            Ds.append(D)
+            alphas.append(alpha)
+        self.plotmanylos(Ds, alphas,lam)
+
+    def plotelipse(self,D, alpha):
+
+        fig = plt.figure()
+        ax = fig.add_subplot(1, 1, 1)
+        x = D * np.cos(np.radians(alpha))
+        y = -D * np.sin(np.radians(alpha))
+        plt.plot(x, y, 'r*')
+        b = self.R* 2 * np.cos(self.incl_rad)
+        e1 = patches.Ellipse((0, 0), self.R * 2, b, alpha=0.5)
+        eyi = -b / 2
+        eyf = b / 2
+        exi = -self.R
+        exf = self.R
+        plt.plot((0, 0), (eyi, eyf), 'k--')
+        plt.plot((exi, exf), (0, 0), 'k--')
+        plt.title('incl:%s,' % self.incl + ' D:%s,' % D + ' alf:%s' % alpha)
+        plt.ylabel('kpc')
+        plt.xlabel('kpc')
+        plt.axis('equal')
+        ax.add_patch(e1)
+        return(fig)'''
