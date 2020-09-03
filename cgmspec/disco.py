@@ -12,11 +12,9 @@ class Disco:
 
     def __init__(self,h, incl, Rcore=0.1):
         """
-
-        :param R: float, Radius of disc in kpc
         :param h: float, height of disc in kpc
         :param incl: float, inclination angle of disc in degrees
-        :param Rcore: float, radius of disk core in kpc
+        :param Rcore: float, radius of disk core in kpc, where the probability is maximum
         """
 
         self.Rcore = Rcore
@@ -24,23 +22,43 @@ class Disco:
         self.incl = incl
         self.incl_rad = np.radians(self.incl)
 
-    def prob_hit(self, r, r_0):
+
+
+    def prob_hit(self, r, r_0, prob_rmin=100):
+        """
+        Probability of hitting a cloud at distance r in the plane xy of a disc of radius rmax. For the moment is a power law.
+
+        :param r: np.array, array with distances to the center of disc in plane xy in kpc
+        :param r_0: float, the characteristicradius of the power law
+        :param prob_rmin: float, probability at Rcore or below, default 100% probability of crossing a cloud
+        :return: float, probability of hitting a cloud
+        """
+        rmin = self.Rcore
+        ind = np.log(prob_rmin)/(np.log(rmin)-np.log(r_0))
+        A = r/r_0
+        prob = A**(ind)
+        prob = np.where(r<=rmin, prob_rmin, prob)
+        return prob
+
+    '''def prob_hit(self, r, r_0):
         """
         :param r: float, distance to the center of disc in plane xy in kpc
+        :param r_0: float, characteristic
         :return: float, covering fraction at distance r
         """
 
-        return csu.prob_hit(r, self.Rcore, r_0)
+        return csu.prob_hit(r, self.Rcore, r_0)'''
 
-    def los_vel(self, y, D, alpha, v_inf,vR=196, hv=10):
+    def los_vel(self, y, D, alpha, vR, hv, v_inf=0):
         """
-        See Ho et al. 2017
+        line of sight velocity of a cloud in a disc. See Ho et al. 2017
 
         :param y: np.array, distance of the line-of-sight to the semi-major axis (x-axis) along the y-axis
         :param D: float, impact parameter in kpc
         :param alpha: float, angle between the major axis and the line-of-sight, clockwise, in degrees
         :param vR: maximum velocity of rotation of the disk in km/s
         :param hv: velocity scale height in kpc
+        :param v_inf: the infall velocity, for the moment i'm not using it.
         :return: line-of-sight velocity for a cloud in the given position
 
         """
@@ -66,6 +84,15 @@ class Disco:
         return(vr)
 
     def get_cells(self,D,alpha,size):
+        """
+        which cells does the line of sight crosses given the parameters.
+
+        :param D: float, impact parameter in kpc
+        :param alpha: float, angle between the major axis and the line-of-sight, clockwise, in degrees
+        :size: float, size of grid where a cloud could be in kpc, to model a hit or no hit of a cloud
+        :return: (number of cells, positions(y,z)): (float, array of tuples)
+        """
+
 
         h = self.h
         incli = self.incl
@@ -78,7 +105,7 @@ class Disco:
 
         z1 = h/2
         z2 = -h/2
-        print('y1,y2', y1, y2)
+        #print('y1,y2', y1, y2)
         t = 0
         y = y1
         z = z1
@@ -89,7 +116,7 @@ class Disco:
             nygrill = int((y1/size)-1)
 
         nzgrill = int((h/2)/size)
-        print('grillas', nygrill, nzgrill)
+        #print('grillas', nygrill, nzgrill)
 
         cellnum = 0
         cellpos = []
@@ -97,10 +124,10 @@ class Disco:
         zlos = n + m*ylos
 
         while t<loslenght:
-              print('grillas', nygrill, nzgrill)
+              #print('grillas', nygrill, nzgrill)
               ypos = (size*nygrill)+(size/2)
               zpos = (size*nzgrill)-(size/2)
-              print('posicion', ypos,zpos)
+              #print('posicion', ypos,zpos)
               cellpos.append([ypos,zpos])
               cellnum = cellnum+1
               nexty = ((nygrill+1)*size, n+(m*(nygrill+1)*size))
@@ -109,14 +136,14 @@ class Disco:
               dnextz = np.sqrt(((nextz[0]-y)**2)+ (nextz[1]-z)**2)
 
               if dnexty < dnextz:
-                  print(0)
+                #  print(0)
                   t = t + dnexty
                   y = nexty[0]
                   z = nexty[1]
                   nygrill = nygrill+1
 
               else:
-                  print(1)
+                 # print(1)
                   t = t + dnextz
                   y = nextz[0]
                   z = nextz[1]
@@ -172,6 +199,10 @@ class Disco:
         :param alpha: float, angle between the major axis and the line-of-sight, clockwise, in degrees
         :lam: array, wavelenghts where the spectra is calculated
         :iter: numer of iterations to do the average
+        :param X: can be 1,2 or 12, depending if you want MgII 2796.35 , MII 2803.53 or both transitions
+        :param z: float, the redshift of  the absorbing system
+        :param N: column density of the absorption produced by one cloud
+        :param b: doppler parameter of the absorption
         :return: (vele, flux, nclouds) : (array, array, float)
         """
 
@@ -190,7 +221,7 @@ class Disco:
         vele1 = (const.c.to('km/s').value * ((lam / (lam0 * (1 + z))) - 1))
 
         grids = self.get_cells(D,alpha,grid_size)
-        print(grids)
+        #print(grids)
         flux_to_average1 = []
         flux_to_average2 = []
         nclouds_to_average = []
@@ -201,7 +232,7 @@ class Disco:
 
             Ns = self.get_clouds(grids, D, alpha, grid_size, r_0, v_max, h_v, v_inf)
 
-            print(Ns)
+            #print(Ns)
 
             taus1 = []
 
@@ -235,145 +266,3 @@ class Disco:
     #    print('bb', len(average_flux1), len(average_flux2))
         average_nclouds = np.median(nclouds_to_average)
         return (vele1, average_flux1, average_nclouds)
-
-
-    '''def plotspecandelipse(self, D, alpha, lam, iter,X, z, grid_size, N, b, prob_rmax, prob_rmin):
-        """
-        Returns a figure with two plots. On the left is the disk proyected in the sky plane and the LOS position, in the right the spectra generated.
-
-        :param D: float, impact parameter in kpc
-        :param alpha: float, angle between the major axis and the line-of-sight, clockwise, in degrees
-        :lam: array, wavelenghts where the spectra is calculated
-        :return: Plot
-        """
-
-        flux = self.averagelosspec(D, alpha, lam, iter,X, z, grid_size, N, b, prob_rmax, prob_rmin)[1]
-
-        # import pdb; pdb.set_trace()
-
-        fig = plt.figure(figsize=(15, 5))
-        grid = plt.GridSpec(1, 3, wspace=0.4, hspace=0.3)
-        elipse = fig.add_subplot(grid[0, 0])
-        spectro = fig.add_subplot(grid[0, 1:])
-        b = self.R* 2 * np.cos(self.incl_rad)
-        e1 = patches.Ellipse((0, 0), self.R * 2, b, alpha=0.5)
-        elipse.axis('equal')
-        elipse.add_patch(e1)
-        # elipse.set_xlim((-radio)-1,(radio)+1)
-        # elipse.set_ylim((-radio)-1,(radio)+1)
-        x = D * np.cos(np.radians(alpha))
-        y = -D * np.sin(np.radians(alpha))
-        elipse.plot(x, y, 'r*')
-        eyi = -b / 2
-        eyf = b / 2
-        exi = -self.R
-        exf = self.R
-        elipse.plot((0, 0), (eyi, eyf), 'k--')
-        elipse.plot((exi, exf), (0, 0), 'k--')
-        elipse.set_title('incl:%s,' % self.incl + ' D:%s,' % D + ' alf:%s' % alpha)
-        elipse.set_ylabel('kpc')
-        elipse.set_xlabel('kpc')
-        spectro.plot(flux[0], flux[1])
-        spectro.set_title('Number of cluds:%s' % flux[2])
-        spectro.set_ylim(-0.05, 1.05)
-        spectro.set_xlim(-300, 300)
-        spectro.axvline(ls='--', lw=1)
-        spectro.axhline(ls='--', lw=1)
-        spectro.set_xlabel('LOS vel [km/s]')
-        spectro.set_ylabel('Norm. Flux')
-        plt.show()
-
-    def plotmanylos(self, D, alpha, lam):
-        """
-        Returns a figure with many LOS in the disk
-        :param D: array, impact parameters in kpc
-        :param alpha: array, angles between the major axis and the line-of-sight, clockwise, in degrees
-        :lam: array, wavelenghts where the spectra is calculated
-        :return: Plot
-        """
-
-        fluxes = []
-        for i in range(len(D)):
-            flux = self.losspec(D[i], alpha[i],lam)
-            fluxes.append(flux)
-
-        fig = plt.figure(figsize=(15, 5))
-        grid = plt.GridSpec(1, 3, wspace=0.4, hspace=0.3)
-        elipse = fig.add_subplot(grid[0, 0])
-        spectro = fig.add_subplot(grid[0, 1:])
-        b = self.R* 2 * np.cos(self.incl_rad)
-        e1 = patches.Ellipse((0, 0), self.R * 2, b, alpha=0.5)
-        elipse.axis('equal')
-        elipse.add_patch(e1)
-        color=cm.rainbow(np.linspace(0,1,len(fluxes)))
-
-        for i in range(len(fluxes)):
-            x = D[i] * np.cos(np.radians(alpha[i]))
-            y = -D[i] * np.sin(np.radians(alpha[i]))
-            elipse.plot(x, y, color=color[i], marker='*')
-            spectro.plot(fluxes[i][0], fluxes[i][1], color=color[i])
-        eyi = -b / 2
-        eyf = b / 2
-        exi = -self.R
-        exf = self.R
-        elipse.plot((0, 0), (eyi, eyf), 'k--')
-        elipse.plot((exi, exf), (0, 0), 'k--')
-        elipse.set_title('incl:%s,' % self.incl + ' D:%s,' % D + ' alf:%s' % alpha)
-        elipse.set_ylabel('kpc')
-        elipse.set_xlabel('kpc')
-        spectro.set_ylim(-0.05, 1.05)
-        spectro.set_xlim(-300, 300)
-        spectro.axvline(ls='--', lw=1)
-        spectro.axhline(ls='--', lw=1)
-        spectro.set_xlabel('LOS vel [km/s]')
-        spectro.set_ylabel('Norm. Flux')
-        plt.show()
-
-
-    def plot_aver_spax(self, D, alpha, lam, sizex, sizey):
-
-        alpha_rad = np.radians(alpha)
-        xc = D*np.sin(alpha_rad)
-        yc = -D*np.cos(alpha_rad)
-        p0 = (xc, yc)
-        p1 = (xc, yc+sizey)
-        p2 = (xc+sizex, yc)
-        p3 = (xc, yc-sizey)
-        p4 =  (xc-sizex, yc)
-        ps = np.asarray((p0,p1,p2,p3,p4))
-        #print(ps)
-
-        Ds =  []
-        alphas =  []
-        #print('ln',len(ps))
-        for i in range(len(ps)):
-            #print('jajaja', ps[i][0], ps[i][1])
-            #print(ps[i][1]/ps[i][0])
-            alpha = -np.arctan2(ps[i][1],ps[i][0])
-            #print('al',alpha)
-            D = ps[i][0]/np.cos(alpha)
-            Ds.append(D)
-            alphas.append(alpha)
-        self.plotmanylos(Ds, alphas,lam)
-
-    def plotelipse(self,D, alpha):
-
-        fig = plt.figure()
-        ax = fig.add_subplot(1, 1, 1)
-        x = D * np.cos(np.radians(alpha))
-        y = -D * np.sin(np.radians(alpha))
-        plt.plot(x, y, 'r*')
-        b = self.R* 2 * np.cos(self.incl_rad)
-        e1 = patches.Ellipse((0, 0), self.R * 2, b, alpha=0.5)
-        eyi = -b / 2
-        eyf = b / 2
-        exi = -self.R
-        exf = self.R
-        plt.plot((0, 0), (eyi, eyf), 'k--')
-        plt.plot((exi, exf), (0, 0), 'k--')
-        plt.title('incl:%s,' % self.incl + ' D:%s,' % D + ' alf:%s' % alpha)
-        plt.ylabel('kpc')
-        plt.xlabel('kpc')
-        plt.axis('equal')
-        ax.add_patch(e1)
-        return(fig)'''

@@ -31,7 +31,6 @@ def get_cells(h,incli,D,alpha,size):
     major_ticks = np.arange(-50, 50, size)
     ylos = np.linspace(y1,y2, 100)
     zlos = n + m*ylos
-    #ax.set_yticks(np.arange(z1,z2,size))
     ax.set_yticks(major_ticks)
     ax.set_xticks(major_ticks)
     ax.grid(which='both')
@@ -50,14 +49,6 @@ def get_cells(h,incli,D,alpha,size):
           dnexty = np.sqrt(((nexty[0]-y)**2)+ (nexty[1]-z)**2)
           nextz = ((((nzgrill-1)*size)-n)/m, (nzgrill-1)*size)
           dnextz = np.sqrt(((nextz[0]-y)**2)+ (nextz[1]-z)**2)
-          #nextycross = (size*nycell, n+(m*size*nycell))
-          #nextzcross = ((z-n) / m, size*nzcell)
-
-          #zdisttoycross = n+(m*y)
-          #ydisttozcross = (z-n) / m
-          #disttoycross = np.sqrt(((nextycross[0]-y)**2)+(nextycross[1]-z)**2)
-          #disttozcross = np.sqrt(((nextzcross[0]-y)**2)+(nextzcross[1]-z)**2)
-          #print('distancias', disttoycross, disttozcross)
 
           if dnexty < dnextz:
               print(0)
