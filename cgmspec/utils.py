@@ -4,7 +4,7 @@ from math import log
 from astropy import constants as const
 from scipy.special import wofz
 
-"""Utilities for cgmspec"""
+ """Utilities for cgmspec"""
 
 def prob_hit(r, rmin, r_0, prob_rmin=100):
     """
