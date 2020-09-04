@@ -23,20 +23,6 @@ dist = cosmo.luminosity_distance(z)
 galPA = 55
 galcen = SkyCoord(ra=237.52059628552735*u.degree, dec=-78.188149277705151*u.degree, frame='icrs')
 
-
-
-datacube  = Cube('ccdatatrue.fits')
-
-'''xlen = len(datacube[0,:,0].data)
-ylen = len(datacube[0,0,:].data[0])
-
-#create a model cube to put all the model spectras
-head = datacube.primary_header
-wcs1 = WCS(head)
-wave1 = WaveCoord(cdelt=0.5, crval=4825.12, cunit=u.angstrom)
-rawdat = np.ones((50, xlen, ylen))
-modelcube = Cube(data=rawdat, wcs=wcs1, wave=wave1)'''
-
 #Model parameters
 
 incli = 10
@@ -48,9 +34,25 @@ h_v = 10
 csize = 0.1
 r_0= 1000
 
-model = Disco(h, incli, Rcore=0.1)
+model = Disco(h, incli, Rcore=0.1) #create the disco model
 
-'''for i in range(xlen):
+
+
+datacube  = Cube('ccdatatrue.fits')
+
+#Create a synthetic cube of the same size of the datacube
+
+'''xlen = len(datacube[0,:,0].data)
+ylen = len(datacube[0,0,:].data[0])
+
+#create a model cube to put all the model spectras
+head = datacube.primary_header
+wcs1 = WCS(head)
+wave1 = WaveCoord(cdelt=0.5, crval=4825.12, cunit=u.angstrom)
+rawdat = np.ones((50, xlen, ylen))
+modelcube = Cube(data=rawdat, wcs=wcs1, wave=wave1)
+
+for i in range(xlen):
     for j in range(ylen):
         coord_sky = datacube.wcs.pix2sky([i-1, j-1], unit=u.deg)
         dec = coord_sky[0][0]
@@ -69,12 +71,14 @@ model = Disco(h, incli, Rcore=0.1)
 modelcube.write('modelcube_i%s' %incli  +'_N%s' %col_dens + '_h%s' %h+'_b%s' %b + '_vmax%s'%v_max +'_hv%s' %h_v+'_csize%s'%csize+'_r0%s'%r_0+'.fits')'''
 
 
-#create only one spectra
+#create only one spectra in position pixel
+
+pixel = [12,12]
 
 from timeit import default_timer as timer
 start = timer()
 
-pixel = [12,12]
+
 coord_sky = datacube.wcs.pix2sky([pixel[0]-1, pixel[1]-1], unit=u.deg)
 dec = coord_sky[0][0]
 ra = coord_sky[0][1]
