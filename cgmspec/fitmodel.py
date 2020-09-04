@@ -1,3 +1,4 @@
+
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
 from mpdaf.obj import Cube, WCS, WaveCoord, Spectrum
