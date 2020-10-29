@@ -1,10 +1,11 @@
 README.md
 setup.py
 cgmspec/__init__.py
+cgmspec/createcube.py
 cgmspec/disco.py
-cgmspec/disco_original.py
-cgmspec/plotsimspec_original.py
-cgmspec/test.py
+cgmspec/fitmodel.py
+cgmspec/normcube.py
+cgmspec/selectgrid.py
 cgmspec/utils.py
 cgmspec.egg-info/PKG-INFO
 cgmspec.egg-info/SOURCES.txt

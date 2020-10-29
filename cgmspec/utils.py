@@ -4,7 +4,19 @@ from math import log
 from astropy import constants as const
 from scipy.special import wofz
 
- """Utilities for cgmspec"""
+"""Utilities for cgmspec"""
+
+def wavelenght_to_rfvel(lam, lam0, z):
+    return (const.c.to('km/s').value * ((lam / (lamc *(1 + z)))-1))
+
+def get_alpha(pos, pos_gal, PA_gal):
+    PA_pix = pos_gal.position_angle(pos).degree
+    alpha = PA_gal +180 -PA_pix
+    return (alpha)
+
+def get_impactparam(pos, pos_gal, scale):
+    D = scale * pos_gal.separation(pos).arcsec
+    return D
 
 def prob_hit(r, rmin, r_0, prob_rmin=100):
     """
@@ -123,7 +135,7 @@ def Tau(lam,vel,X,N, b,z=0.73379):
         gamma, mass = [2.68e8, 24.305]
         c  = const.c.to('cm/s').value
         sigma0 = 0.0263
-        lamc = ((vel/const.c.to('km/s').value)+1)*((lam0[i]))
+        lamc = ((vel[:,None]/const.c.to('km/s').value)+1)*((lam0[i]))
         #print('lamc', lamc)
         nu = c/(lam*1e-8)
         nu0 = c/(lamc*1e-8)
@@ -138,12 +150,11 @@ def Tau(lam,vel,X,N, b,z=0.73379):
 
         taut = N * sigma0 * f[i] * v
         taus.append(taut)
-        dv = (const.c.to('km/s').value * ((lam / (lamc *(1 + z)))-1))
 
-    #print(taus)
+
     taus = np.asarray(taus)
     taust = taus.sum(axis=0)
-    return(taust,dv)
+    return(taust)
 
 
 def normflux(taun):

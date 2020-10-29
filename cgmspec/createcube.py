@@ -25,13 +25,13 @@ galcen = SkyCoord(ra=237.52059628552735*u.degree, dec=-78.188149277705151*u.degr
 
 #Model parameters
 
-incli = 10
-col_dens = 10**15
+incli = 80
+col_dens = 10**14
 h = 5
 b = 5
 v_max = 200
 h_v = 10
-csize = 0.1
+csize = 0.001
 r_0= 1000
 
 model = Disco(h, incli, Rcore=0.1) #create the disco model
@@ -88,7 +88,7 @@ D = scale * galcen.separation(c1).arcsec
 pa = galcen.position_angle(c1).to(u.deg)
 alpha = galPA - pa.value
 wave1 = WaveCoord(cdelt=0.1, crval=4751.37, cunit= u.angstrom, shape=247.5)
-spec = model.averagelosspec(D, alpha, lam1, 100,12,z,csize, col_dens, b, r_0, v_max, h_v, 0)
-spe = Spectrum(wave=wave1, data=spec[1])
+spec = model.averagelos(D, alpha, lam1, 100,12,z,csize, col_dens, b, r_0, v_max, h_v, 0)
+spe = Spectrum(wave=wave1, data=spec)
 rspe = spe.resample(1.25)
 print(timer() - start)

@@ -5,6 +5,7 @@ from matplotlib import pyplot as plt
 from matplotlib import patches
 from astropy import constants as const
 from matplotlib.pyplot import cm
+from timeit import default_timer as timer
 
 """This Class Disco represents the CGM of a galaxy from a disc model"""
 
@@ -22,6 +23,40 @@ class Disco:
         self.h = h
         self.incl = incl
         self.incl_rad = np.radians(self.incl)
+
+    def get_cells(self,D,alpha,size,r_0, vR,hv):
+
+
+        h = self.h
+        incli = self.incl
+
+        m = -np.tan(np.radians(90-incli))
+
+        x0 = D * np.cos(np.radians(alpha))
+        y0 = D*np.sin(np.radians(alpha))/np.cos(np.radians(incli))
+        n = -m*y0
+
+        y1 = ((h/2)-n)/m
+        y2 = (-(h/2)-n)/m
+
+        mindis = np.sqrt(2*(size**2))/2
+        z1 = h/2
+        z2 = -h/2
+        b = -1
+        zgrid = np.arange((-h/2) + (size/2), (h/2) + (size/2), size)
+        ymin = int(y1/size) * size + (size/2)
+        ymax = int(y2/size)*size +(size/2)
+        ygrid = np.arange(ymin,ymax,size)
+        points = abs((m * ygrid + b * zgrid[:,None] + n)) / (np.sqrt(m * m + b * b))
+        selected = points <= mindis
+        yv, zv = np.meshgrid(ygrid, zgrid)
+        ypos = yv[selected]
+        zpos = zv[selected]
+
+        radios = np.sqrt((x0**2)+ypos**2)
+        probs = self.prob_hit(radios,r_0)
+        velos = self.los_vel(ypos, D, alpha, vR, hv)
+        return(ypos,zpos, probs, velos)
 
 
 
@@ -63,7 +98,6 @@ class Disco:
         :return: line-of-sight velocity for a cloud in the given position
 
         """
-
         v_los_inf = (v_inf * np.sin(self.incl_rad)) * (y/(np.sqrt((y**2) + D**2)))
         al_rad = np.radians(alpha)
 
@@ -84,186 +118,33 @@ class Disco:
 
         return(vr)
 
-    def get_cells(self,D,alpha,size):
-        """
-        which cells does the line of sight crosses given the parameters.
-
-        :param D: float, impact parameter in kpc
-        :param alpha: float, angle between the major axis and the line-of-sight, clockwise, in degrees
-        :size: float, size of grid where a cloud could be in kpc, to model a hit or no hit of a cloud
-        :return: (number of cells, positions(y,z)): (float, array of tuples)
-        """
 
 
+
+    def get_clouds(self,ypos,zpos,probs,velos):
+        randomnum = np.random.uniform(0, 100, len(probs))
+        selected = probs >= randomnum
+        return(velos[selected])
+
+    def losspec(self,lam,velos,X,N, b,z=0.73379):
+        taus = csu.Tau(lam,velos,X,N, b,z=0.73379)
+        tottau = np.sum(taus,axis=0)
+        return(np.exp(-tottau))
+
+
+    def averagelos(self, D, alpha, lam, iter,X, z, grid_size, N, b, r_0, v_max, h_v, v_inf):
         h = self.h
         incli = self.incl
 
-        m = -np.tan(np.radians(incli))
-        y0 = D*np.sin(np.radians(alpha))/np.cos(np.radians(incli))
-        n = -m*y0
-        y1 = ((h/2)-n)/m
-        y2 = (-(h/2)-n)/m
+        cells = self.get_cells(D,alpha,grid_size, r_0,v_max,h_v)
 
-        z1 = h/2
-        z2 = -h/2
-        #print('y1,y2', y1, y2)
-        t = 0
-        y = y1
-        z = z1
-        loslenght = np.sqrt(((y2-y1)**2)+(z2-z1)**2)
-        if y1<0:
-            nygrill = int(y1/size)
-        else:
-            nygrill = int((y1/size)-1)
+        results = [0]*iter
+        results = [self.get_clouds(cells[0],cells[1],cells[2],cells[3]) for x in results]
+        results = np.asarray(results)
 
-        nzgrill = int((h/2)/size)
-        #print('grillas', nygrill, nzgrill)
+        fluxes = [0]*iter
+        fluxtoaver = [self.losspec(lam,results[x],X,N,b) for x in fluxes]
+        fluxtoaver = np.asarray(fluxtoaver)
+        totflux = np.median(fluxtoaver, axis=0)
 
-        cellnum = 0
-        cellpos = []
-        ylos = np.linspace(y1,y2, 100)
-        zlos = n + m*ylos
-
-        while t<loslenght:
-              #print('grillas', nygrill, nzgrill)
-              ypos = (size*nygrill)+(size/2)
-              zpos = (size*nzgrill)-(size/2)
-              #print('posicion', ypos,zpos)
-              cellpos.append([ypos,zpos])
-              cellnum = cellnum+1
-              nexty = ((nygrill+1)*size, n+(m*(nygrill+1)*size))
-              dnexty = np.sqrt(((nexty[0]-y)**2)+ (nexty[1]-z)**2)
-              nextz = ((((nzgrill-1)*size)-n)/m, (nzgrill-1)*size)
-              dnextz = np.sqrt(((nextz[0]-y)**2)+ (nextz[1]-z)**2)
-
-              if dnexty < dnextz:
-                #  print(0)
-                  t = t + dnexty
-                  y = nexty[0]
-                  z = nexty[1]
-                  nygrill = nygrill+1
-
-              else:
-                 # print(1)
-                  t = t + dnextz
-                  y = nextz[0]
-                  z = nextz[1]
-                  nzgrill = nzgrill-1
-
-        return(cellnum, cellpos)
-
-    def get_clouds(self, grids, D, alpha, grid_size, r_0, v_max, h_v, v_inf):
-        """
-        Obtain main parameters to describe clouds intersected by the sightline along the disc
-
-        :param D: float, impact parameter in kpc
-        :param alpha: float, angle between the major axis and the line-of-sight, clockwise, in degrees
-        :param grid_size: size of grid in kpc to model a hit or no hit of a cloud
-        :return: (nclouds, vel_array, r_array) : (float, array, array)
-        """
-
-        incli = self.incl
-        hdis = self.h
-
-        al_rad = np.radians(alpha)
-        x0 = D * np.cos(al_rad)
-        n = 0
-        ngrill = 0
-        velos = []
-        radios = []
-
-        #answer = csu.los_disc_intersect(D, incli, alpha, radio, hdis)
-
-        #print('aaaaa', yt, zt)
-        for i in range(len(grids[1])):
-            rc = np.sqrt((grids[1][i][0] ** 2) + x0 ** 2)
-            prob = self.prob_hit(rc, r_0 )
-            selec = np.random.uniform(0, 100)
-
-            if selec < prob:
-                # print(yp)
-                veli = self.los_vel(grids[1][i][0], D, alpha, v_inf, v_max, h_v)
-                n = n + 1
-                velos.append(veli)
-                radios.append(rc)
-            else:
-                pass
-
-        return(n, velos, radios)
-
-
-    def averagelosspec(self, D, alpha, lam, iter,X, z, grid_size, N, b, r_0, v_max, h_v, v_inf):
-        """
-        Obtain the spectra for a LOS crossing the disk in velocity scale
-
-        :param D: float, impact parameter in kpc
-        :param alpha: float, angle between the major axis and the line-of-sight, clockwise, in degrees
-        :lam: array, wavelenghts where the spectra is calculated
-        :iter: numer of iterations to do the average
-        :param X: can be 1,2 or 12, depending if you want MgII 2796.35 , MII 2803.53 or both transitions
-        :param z: float, the redshift of  the absorbing system
-        :param N: column density of the absorption produced by one cloud
-        :param b: doppler parameter of the absorption
-        :return: (vele, flux, nclouds) : (array, array, float)
-        """
-
-
-
-
-        print('incl',self.incl)
-
-        if X == 1:
-            lam0 = 2796.35
-        if X ==2:
-            lam0 = 2803.53
-        if X == 12:
-            lam0 = 2796.35
-
-        vele1 = (const.c.to('km/s').value * ((lam / (lam0 * (1 + z))) - 1))
-
-        grids = self.get_cells(D,alpha,grid_size)
-        #print(grids)
-        flux_to_average1 = []
-        flux_to_average2 = []
-        nclouds_to_average = []
-        vele = []
-        average_flux = []
-
-        for i in range(iter):
-
-            Ns = self.get_clouds(grids, D, alpha, grid_size, r_0, v_max, h_v, v_inf)
-
-            #print(Ns)
-
-            taus1 = []
-
-            if Ns[0] == 0:
-                 nclouds_to_average.append(0)
-                 flux = np.ones(len(lam))
-                 flux_to_average1.append(flux)
-
-
-            else:
-                 for i in range(len(Ns[1])):
-                     vel = Ns[1][i]
-                     tau1 = csu.Tau(lam, vel, X, N, b)
-                     taus1.append(tau1)
-
-            # print(taus[0])
-            # print(len(taus))
-            # print(len(taus[0]))
-                 sumataus1 = csu.sumtau(taus1)
-                 flux1 = csu.normflux(sumataus1)
-                 flux_to_average1.append(flux1)
-                 nclouds_to_average.append(Ns[0])
-
-
-        vele.append(vele1)
-        vele = np.asarray(vele)
-        flux_to_average1 = np.asarray(flux_to_average1)
-        #print('aa', flux_to_average1)
-        nclouds_to_average = np.asarray(nclouds_to_average)
-        average_flux1 = np.median(flux_to_average1, axis=0)
-    #    print('bb', len(average_flux1), len(average_flux2))
-        average_nclouds = np.median(nclouds_to_average)
-        return (vele1, average_flux1, average_nclouds)
+        return(totflux)
