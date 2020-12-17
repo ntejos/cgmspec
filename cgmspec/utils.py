@@ -119,6 +119,12 @@ def los_disc_intersect(D, i, alpha, R, h):
 
 
 def Tau(lam,vel,X,N, b,z=0.73379):
+    '''
+    lam: array of wavelenghts for out spectrum
+    vel: array with velos of the get_clouds
+    N: array with logN of the clouds, len(N )=lem(Vel)
+    Returns: Taus for all clouds in a LOS, len(vel) = nr clouds
+    '''
     if X ==1:
         lam0 = [2796.35]
         f = [0.6155]
@@ -129,12 +135,12 @@ def Tau(lam,vel,X,N, b,z=0.73379):
         lam0 = [2796.35, 2803.53]
         f = [0.6155, 0.3054]
 
-
+    gamma, mass = [2.68e8, 24.305]
+    c  = const.c.to('cm/s').value
+    sigma0 = 0.0263
     taus = []
     for i in range(len(lam0)):
-        gamma, mass = [2.68e8, 24.305]
-        c  = const.c.to('cm/s').value
-        sigma0 = 0.0263
+
         lamc = ((vel[:,None]/const.c.to('km/s').value)+1)*((lam0[i]))
         #print('lamc', lamc)
         nu = c/(lam*1e-8)
@@ -147,10 +153,11 @@ def Tau(lam,vel,X,N, b,z=0.73379):
         y = gamma/(4*np.pi*dnud)
         zi = x + 1j*y
         v = np.asarray(np.real(wofz(zi)/(np.sqrt(np.pi)*dnud)))
+        
 
-        taut = N * sigma0 * f[i] * v
+
+        taut =N * sigma0*f[i] * v  #Le falta N y sigma0, se hace despues para ahorrar tiempo
         taus.append(taut)
-
 
     taus = np.asarray(taus)
     taust = taus.sum(axis=0)

@@ -7,7 +7,13 @@ from astropy import constants as const
 from matplotlib.pyplot import cm
 from timeit import default_timer as timer
 
+
+
 """This Class Disco represents the CGM of a galaxy from a disc model"""
+
+#logN = np.arange(12, 16, 0.1)
+#logN_PDF = logN**(-0.4)
+#logN_dist = RanDist(logN, logN_PDF)
 
 class Disco:
     """Represents the CGM of a idealized disc projected in the sky"""
@@ -126,10 +132,14 @@ class Disco:
         selected = probs >= randomnum
         return(velos[selected])
 
+
+
     def losspec(self,lam,velos,X,N, b,z=0.73379):
         taus = csu.Tau(lam,velos,X,N, b,z=0.73379)
         tottau = np.sum(taus,axis=0)
         return(np.exp(-tottau))
+
+
 
 
     def averagelos(self, D, alpha, lam, iter,X, z, grid_size, N, b, r_0, v_max, h_v, v_inf):
@@ -137,10 +147,16 @@ class Disco:
         incli = self.incl
 
         cells = self.get_cells(D,alpha,grid_size, r_0,v_max,h_v)
+        #List of 4 params:
+        #cells= [ypos,zpos, probs, velos]
 
         results = [0]*iter
+
         results = [self.get_clouds(cells[0],cells[1],cells[2],cells[3]) for x in results]
+        #list of len(iter) velocities satisfying prob_hit
         results = np.asarray(results)
+
+
 
         fluxes = [0]*iter
         fluxtoaver = [self.losspec(lam,results[x],X,N,b) for x in fluxes]

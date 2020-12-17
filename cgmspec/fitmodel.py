@@ -37,13 +37,13 @@ print(pixel)
 #All parameters in my model
 params = Parameters()
 params.add_many(
-        ('incli', 80, True),
+        ('incli', 85, True),
         ('col_dens', 14, True),
-        ('height', 12.0, True),
-        ('dop_param', 8.0, True),
+        ('height', 11.5, True),
+        ('dop_param', 7.0, True),
         ('csize', 0.1, False),
         ('r_0', 1, True),
-        ('vel_max', 200, True),
+        ('vel_max', 195, True),
         ('h_v', 4.5, True),
         )
 
@@ -243,7 +243,7 @@ def plot_results(p, pixel):
 
     for i in range(int(len(pixel))):
 
-        if i < int(len(pixel))/2:
+        if i < (int(len(pixel))/2):
             ax1 = axs[i, 0]
         else:
             ax1 = axs[int(i-len(pixel)/2), 1]
