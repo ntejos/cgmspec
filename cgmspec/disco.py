@@ -6,6 +6,7 @@ from matplotlib import patches
 from astropy import constants as const
 from matplotlib.pyplot import cm
 from timeit import default_timer as timer
+from sampledist import RanDist
 
 
 
@@ -134,15 +135,21 @@ class Disco:
 
 
 
-    def losspec(self,lam,velos,X,N, b,z=0.73379):
-        taus = csu.Tau(lam,velos,X,N, b,z=0.73379)
+    def losspec(self,lam,velos,X, b,z=0.73379):
+        nvals = np.logspace(12.6, 16, 1000)
+        fN = RanDist(nvals, csu.ndist(nvals))
+        Ns = fN.random(len(velos))
+        N = np.empty([len(velos), 1])
+        for i in range(len(Ns)):
+            N[i,0]=Ns[i]
+        taus = csu.Tau(lam,velos,X,N,b,z=0.73379)
         tottau = np.sum(taus,axis=0)
         return(np.exp(-tottau))
 
 
 
 
-    def averagelos(self, D, alpha, lam, iter,X, z, grid_size, N, b, r_0, v_max, h_v, v_inf):
+    def averagelos(self, D, alpha, lam, iter,X, z, grid_size, b, r_0, v_max, h_v, v_inf):
         h = self.h
         incli = self.incl
 
@@ -159,7 +166,7 @@ class Disco:
 
 
         fluxes = [0]*iter
-        fluxtoaver = [self.losspec(lam,results[x],X,N,b) for x in fluxes]
+        fluxtoaver = [self.losspec(lam,results[x],X,b) for x in fluxes]
         fluxtoaver = np.asarray(fluxtoaver)
         totflux = np.median(fluxtoaver, axis=0)
 

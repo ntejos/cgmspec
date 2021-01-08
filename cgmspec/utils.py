@@ -6,6 +6,10 @@ from scipy.special import wofz
 
 """Utilities for cgmspec"""
 
+
+def ndist(n, beta = 1.5 ):
+   return n**-beta
+
 def wavelenght_to_rfvel(lam, lam0, z):
     return (const.c.to('km/s').value * ((lam / (lamc *(1 + z)))-1))
 
@@ -153,10 +157,12 @@ def Tau(lam,vel,X,N, b,z=0.73379):
         y = gamma/(4*np.pi*dnud)
         zi = x + 1j*y
         v = np.asarray(np.real(wofz(zi)/(np.sqrt(np.pi)*dnud)))
-        
 
+        print('N', N)
+        print('v', v)
 
-        taut =N * sigma0*f[i] * v  #Le falta N y sigma0, se hace despues para ahorrar tiempo
+        taut =N * sigma0*f[i] * v
+
         taus.append(taut)
 
     taus = np.asarray(taus)

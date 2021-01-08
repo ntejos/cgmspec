@@ -14,7 +14,7 @@ from lmfit import Minimizer, Parameters, fit_report
 from matplotlib.colors import LogNorm
 
 
-#select spaxels
+#select spaxels of the MUSE cube using a mask ('out_r4_3.npy')
 s_n_mask = np.load('out_r4_3.npy')
 all_pixels = []
 for i in range(len(s_n_mask)):
@@ -34,6 +34,8 @@ pixel3 = all_pixels3[np.random.choice(all_pixels3.shape[0],6,replace=False)]
 pixel = np.concatenate((pixel1, pixel2,pixel3))
 
 print(pixel)
+
+
 #All parameters in my model
 params = Parameters()
 params.add_many(
@@ -144,26 +146,28 @@ def chisq(p):
     return(chi)
 
 
-#Do the minimization with the parameters that i want
 
-'''params['incli'].set(min=75, max=90, brute_step=5)
+#Define the range and steps for each parameter
+params['incli'].set(min=75, max=90, brute_step=5)
 params['col_dens'].set(min=12, max=18, brute_step=2)
 params['height'].set(min=11, max=13, brute_step=0.5)
 params['r_0'].set(min=0.5, max=3, brute_step=0.5)
 params['dop_param'].set(min=5, max=9, brute_step=1)
 params['vel_max'].set(min=190, max=205, brute_step=5)
 params['h_v'].set(min=3.5, max=5.5, brute_step=0.5)
-#params['csize'].set(min=-2, max=1, brute_step=1)
+params['csize'].set(min=-2, max=1, brute_step=1)
 
 
+#Do the chi sq minimization with lmfit and brute step
 fitter = Minimizer(chisq, params)
 result = fitter.minimize(method='brute')
 
+#print the results of the minimization
 print('best fit parameters:', result.brute_x0)
-print('result.brute_fval:', result.brute_fval)'''
+print('result.brute_fval:', result.brute_fval)
 
 
-#plot many absorptions with model
+#Function to plot many absorptions with model, need the parameters of the model and a list of  the pixels to plot
 
 def plot_results(p, pixel):
     par = p.valuesdict()
@@ -200,12 +204,6 @@ def plot_results(p, pixel):
     pixel = pixel[Ds.argsort()]
     Ds = np.sort(Ds)
 
-    print(Ds)
-    print(alphas)
-
-
-    #modelflux = np.asarray(modelflux)
-
     fluxes = []
     chis = []
     modelflux = []
@@ -220,21 +218,6 @@ def plot_results(p, pixel):
          fluxes.append(chii[2])
          sigma.append(chii[3])
          diff.append(chii[4])
-         '''lam2 = np.arange(4825.12, 4886.37+1.5, 0.1)
-         wave1 = WaveCoord(cdelt=0.1, crval=4825.12, cunit= u.angstrom)
-
-         model = Disco(h, incli, Rcore=0.1)
-         spec = model.averagelos(Ds[i], alphas[i], lam2, 100,12,z,csize, col_dens, bes, r_0, v_max,h_v, 0)
-         spe = Spectrum(wave=wave1, data=spec)
-         rspe = spe.resample(1.25)
-         fluxmodel = rspe.data
-         modelflux.append(fluxmodel)'''
-
-
-    '''alphas = alphas[Ds.argsort()]
-    chis = chis[Ds.argsort()]
-    model = model[Ds.argsort()]'''
-
 
     fig, axs = plt.subplots(int((len(pixel)/2)), 2, sharex=True, sharey=True)
     bbox = dict(boxstyle="round", fc="0.8")
@@ -370,178 +353,3 @@ def plot_results_brute(result, best_vals=True, varlabels=None,
         plt.savefig(output)
 
 #--------------------------------------------------------------------------------------------------------------------------
-
-
-'''alphas=[]
-Ds = []
-for i in range(len(pixel)):
-    coord_sky = datacube.wcs.pix2sky([pixel[i][1]-1,pixel[i][0]-1], unit=u.deg)
-    dec = coord_sky[0][0]
-    ra = coord_sky[0][1]
-    c1 = SkyCoord(ra*u.degree,dec*u.degree,frame='icrs')
-
-    alpha = csu.get_alpha(c1, galcen,galPA)
-    D = csu.get_impactparam(c1, galcen, scale)
-    alphas.append(alpha)
-    Ds.append(D)
-
-
-
-# cut data to match the size of the model spectra
-ydata = []
-varst = []
-sigma = []
-
-
-for i in range(len(pixel)):
-    flux = datacube[:,pixel[i][1]-1,pixel[i][0]-1]
-    ydatai = flux.data[spectralpixel[0]:spectralpixel[1]+1]
-    sigmai = np.sqrt(flux.var[spectralpixel[0]:spectralpixel[1]+1])
-    ydata.append(ydatai)
-    sigma.append(sigmai)
-
-#for i in range(len(sigma)):
-    #sigma[i] = sigma[i][spectralpixel[0]:spectralpixel[1]+1]
-
-sigma=np.asarray(sigma)
-ydata = np.asarray(ydata)
-sigma = sigma.flatten()
-ydata = ydata.flatten()'''
-
-
-
-#calculate D and alpha for each position in pixel
-'''alphas=[]
-Ds = []
-for i in range(len(pixel)):
-    coord_sky = datacube.wcs.pix2sky([pixel[i][1]-1,pixel[i][0]-1], unit=u.deg)
-    dec = coord_sky[0][0]
-    ra = coord_sky[0][1]
-    scale = 7.28 # z=0.73379  # plat scale (kpc/") for Planck
-    c1 = SkyCoord(ra*u.degree,dec*u.degree,frame='icrs')
-    D = scale * galcen.separation(c1).arcsec
-    pa = galcen.position_angle(c1).to(u.deg)
-    alpha = galPA - pa.value
-    wave1 = WaveCoord(cdelt=0.1, crval=4751.37, cunit= u.angstrom, shape=247.5)
-    alphas.append(alpha)
-    Ds.append(D)'''
-
-
-
-'''Ds = np.asarray(Ds)
-alphas = np.asarray(alphas)
-
-
-chis = chisq(params)
-
-alphas = alphas[Ds.argsort()]
-chis = np.asarray(chis[0])
-chis = chis[Ds.argsort()]
-ydata = ydata[Ds.argsort()]
-Ds = np.sort(Ds)
-incli = 70
-
-#h = 5
-csize = 0.1
-N = 10**14
-bes = 5
-r_0 = 100
-h = 11
-v_max=200
-h_v  =10**4
-ymodel=[]
-for i in range(len(pixel)):
-    lam2 = np.arange(4825.12, 4886.37+1.5, 0.1)
-    model = Disco(h, incli, Rcore=0.1)
-    spec = model.averagelos(Ds[i], alphas[i], lam2, 100,12,z,csize, N, bes, r_0, v_max,h_v, 0)
-    spe = Spectrum(wave=wave1, data=spec)
-    rspe = spe.resample(1.25)
-    ym = rspe.data
-    ymodel.append(ym)
-
-fig, axs = plt.subplots(int((len(pixel)/2)), 2, sharex=True, sharey=True)
-bbox = dict(boxstyle="round", fc="0.8")
-for i in range(int(len(pixel))):
-
-    print(axs)
-    if i < int(len(pixel))/2:
-        ax1 = axs[i, 0]
-    else:
-        ax1 = axs[int(i-len(pixel)/2), 1]
-
-    ax1.step(lam1,ydata[i])
-    ax1.plot(lam1,ymodel[i],'r')
-    ax1.annotate('D=%s' %str(round(Ds[i],2)) + 'Kpc, chi=%s' %str(round(chis[i],2)), (lam1[0], 1.5), bbox=bbox)
-    ax1.set_ylim(0,1.5)'''
-
-
-
-'''def chisq(p):
-    par = p.valuesdict()
-    incli = par['incli']
-    col_denst = par['col_dens']
-    h = par['height']
-    bes = par['dop_param']
-    v_max = par['vel_max']
-    h_vt = par['h_v']
-
-    csize = par['csize']
-    r_0= par['r_0']
-
-    print(incli)
-    h_v = 10**h_vt
-    col_dens = 10**col_denst
-    #for i in range(len(ydata)):
-#        ydatatt.append(ydata[i][spectralpixel[0]:spectralpixel[1]])
-#    ydatat=np.array(ydatatt)
-#    y=ydatat.flatten()
-    #y = np.concatenate((ydata[0][14:36],ydata[1][16:36], ydata[2][16:36]))
-
-
-    ymodelt = []
-    lamt = []
-    ymodel =[]
-    for i in range(len(pixel)):
-        lam2 = np.arange(4825.12, 4886.37+1.5, 0.1)
-        wave1 = WaveCoord(cdelt=0.1, crval=4825.12, cunit= u.angstrom)
-
-        model = Disco(h, incli, Rcore=0.1)
-        spec = model.averagelos(Ds[i], alphas[i], lam2, 100,12,z,csize, col_dens, bes, r_0, v_max,h_v, 0)
-        spe = Spectrum(wave=wave1, data=spec)
-        rspe = spe.resample(1.25)
-        ym = rspe.data
-
-        ymodelt.append(ym)
-
-    for i in range(len(ymodelt)):
-        ymodel.append(ymodelt[i][spectralpixel[0]:spectralpixel[1]+1])
-    ymodel=np.asarray(ymodel)
-    ymodel = ymodel.flatten()
-    #modelflux.append(ymodel)
-    #ymodelt = np.concatenate((ymodel[0][14:36],ymodel[1][16:36],ymodel[2][16:36]))
-
-    tosum = []
-
-    rest = ((ydata-ymodel)/sigma)**2
-    #for i in range(len(ymodel)):
-    #    rest = ((ydata[i]-ymodel[i])/sigma[i])**2
-
-    #    tosum.append(rest)
-    #chipix = []
-    #for i in range(len(pixel)):
-    #    j = i * 22
-    #    tosumpix = tosum[j:j+22]
-    #    chii = np.sum(tosumpix)
-    #    chipix.append(chii)
-    #restos.append(tosum)
-    tosum = np.asarray(rest)
-    return(np.sum(tosum))'''
-
-
-
-#pixel = [[7,19], [5,17], [9,18], [9,16], [7,14], [12,16], [12,14], [11,13], [15,12], [13,9], [13,8], [16,10], [18,9], [17,5], [19,6],[20,6],[17,3],[22,4]]
-#pixel = [[11,17],[10,17],[9,17],[8,17],[8,16],[9,16],[10,16],[11,16],[10,15],[9,15],[8,15],[9,14],[10,14],[11,14],[13,13],[14,10],[14,9],[16,9],[12,12],[12,9],[15,9],[17,9]]
-#pixel = [[8,17]]
-
-
-#pixel =  [[11,17],[9,17],[8,16],[10,16],[8,15],[10,14],[13,13],[14,9],[12,12],[15,9]]#position in datacube to do the fit
